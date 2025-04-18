@@ -4,6 +4,8 @@ Node.js Native Addon for Darts (Double-ARray Trie System)
 
 [![npm version](https://badge.fury.io/js/node-darts.svg)](https://badge.fury.io/js/node-darts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![codecov](https://codecov.io/gh/libraz/node-darts/branch/main/graph/badge.svg)](https://codecov.io/gh/libraz/node-darts)
+[![Test Coverage](https://img.shields.io/badge/coverage-87%25-brightgreen.svg)](https://github.com/libraz/node-darts)
 
 ## Overview
 

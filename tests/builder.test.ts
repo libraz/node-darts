@@ -77,6 +77,54 @@ describe('Builder', () => {
         builder.build(keys, values);
       }).toThrow(BuildError);
     });
+    
+    it('should throw error when keys contain non-string values', () => {
+      const builder = new Builder();
+      const keys = ['apple', 123 as unknown as string, 'orange'];
+      
+      expect(() => {
+        builder.build(keys);
+      }).toThrow(BuildError);
+      expect(() => {
+        builder.build(keys);
+      }).toThrow('All keys must be strings');
+    });
+    
+    it('should throw error when values contain non-number values', () => {
+      const builder = new Builder();
+      const keys = ['apple', 'banana', 'orange'];
+      const values = [100, '200' as unknown as number, 300];
+      
+      expect(() => {
+        builder.build(keys, values);
+      }).toThrow(BuildError);
+      expect(() => {
+        builder.build(keys, values);
+      }).toThrow('All values must be numbers');
+    });
+    
+    it('should call progress callback when provided', () => {
+      jest.useFakeTimers();
+      
+      const builder = new Builder();
+      const keys = ['apple', 'banana', 'orange'];
+      
+      // Mock progress callback
+      const progressCallback = jest.fn();
+      
+      const dict = builder.build(keys, undefined, { progressCallback });
+      
+      // Fast-forward timers
+      jest.advanceTimersByTime(1000);
+      
+      // Ensure callback was called at least once
+      expect(progressCallback).toHaveBeenCalled();
+      
+      // Clean up
+      dict.dispose();
+      
+      jest.useRealTimers();
+    });
   });
   
   describe('buildAndSave', () => {
@@ -87,6 +135,14 @@ describe('Builder', () => {
       const result = await builder.buildAndSave(keys, dictPath);
       expect(result).toBe(true);
       expect(fs.existsSync(dictPath)).toBe(true);
+    });
+    
+    it('should reject with error when build fails', async () => {
+      const builder = new Builder();
+      const keys: string[] = []; // Empty keys array will cause an error
+      
+      await expect(builder.buildAndSave(keys, dictPath)).rejects.toThrow(BuildError);
+      await expect(builder.buildAndSave(keys, dictPath)).rejects.toThrow('Empty keys array');
     });
   });
   
