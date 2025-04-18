@@ -1,6 +1,6 @@
 {
   "name": "node-darts",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Node.js Native Addon for Darts (Double-ARray Trie System)",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
