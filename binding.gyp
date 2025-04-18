@@ -12,7 +12,7 @@
         "<!@(node -p \"require('node-addon-api').include\")",
         "include",
         "src/native",
-        "/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1"
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1"
       ],
       "dependencies": [
         "<!(node -p \"require('node-addon-api').gyp\")"
@@ -35,7 +35,7 @@
             "CLANG_CXX_LIBRARY": "libc++",
             "CLANG_CXX_LANGUAGE_STANDARD": "c++17",
             "OTHER_CPLUSPLUSFLAGS": [
-              "-isystem", "/Library/Developer/CommandLineTools/SDKs/MacOSX14.5.sdk/usr/include/c++/v1"
+              "-isystem", "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1"
             ]
           }
         }],
