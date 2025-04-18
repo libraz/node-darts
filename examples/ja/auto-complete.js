@@ -1,11 +1,12 @@
 /**
  * 自動補完機能の例
- * 
+ *
  * このサンプルでは、Dartsを使った自動補完機能を実装します。
  */
 
-const { buildDictionary, TextDarts } = require('../../dist');
+/* eslint-disable @typescript-eslint/no-require-imports, import/order, @typescript-eslint/no-unused-vars, no-console */
 const readline = require('readline');
+const { buildDictionary, TextDarts } = require('../../dist');
 
 // 自動補完用の辞書データ
 const words = [
@@ -33,7 +34,7 @@ const words = [
   'branch',
   'bread',
   'break',
-  'breakfast'
+  'breakfast',
 ];
 
 // 辞書を構築（値は単語のインデックス）
@@ -48,18 +49,18 @@ const darts = TextDarts.build(words);
  */
 function getCompletions(prefix, limit = 5) {
   if (!prefix) return [];
-  
+
   // 共通接頭辞検索を使用して候補を取得
   const results = [];
-  
+
   // 各単語について、prefixから始まるかチェック
-  for (let i = 0; i < words.length; i++) {
+  for (let i = 0; i < words.length; i += 1) {
     if (words[i].startsWith(prefix)) {
       results.push(words[i]);
       if (results.length >= limit) break;
     }
   }
-  
+
   return results;
 }
 
@@ -69,7 +70,7 @@ console.log('文字を入力すると候補が表示されます。終了する�
 
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout
+  output: process.stdout,
 });
 
 function prompt() {
@@ -79,12 +80,12 @@ function prompt() {
       darts.dispose();
       return;
     }
-    
+
     // TextDartsクラスを使用した共通接頭辞検索の例
     // 注: この例では単純化のためにgetCompletions関数を使用していますが、
     // 実際のアプリケーションではdarts.commonPrefixSearchを活用できます
     const completions = getCompletions(input);
-    
+
     if (completions.length > 0) {
       console.log('補完候補:');
       completions.forEach((word, i) => {
@@ -93,7 +94,7 @@ function prompt() {
     } else {
       console.log('候補はありません');
     }
-    
+
     prompt();
   });
 }
@@ -102,7 +103,7 @@ prompt();
 
 /**
  * 実行結果例：
- * 
+ *
  * === 自動補完デモ ===
  * 文字を入力すると候補が表示されます。終了するには "exit" と入力してください。
  * > a

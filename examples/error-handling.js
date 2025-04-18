@@ -1,8 +1,10 @@
 /**
  * Error handling example
- * 
+ *
  * This sample demonstrates how to handle errors in node-darts.
  */
+
+/* eslint-disable @typescript-eslint/no-require-imports, global-require, no-console, */
 
 const path = require('path');
 const {
@@ -11,7 +13,7 @@ const {
   DartsError,
   FileNotFoundError,
   InvalidDictionaryError,
-  BuildError
+  BuildError,
 } = require('../dist');
 
 console.log('=== Error Handling Example ===');
@@ -35,10 +37,10 @@ try {
   const fs = require('fs');
   const invalidFilePath = path.join(__dirname, 'invalid.darts');
   fs.writeFileSync(invalidFilePath, 'This is not a valid darts file');
-  
+
   const dict = new Dictionary();
   dict.loadSync(invalidFilePath);
-  
+
   // Clean up after test
   fs.unlinkSync(invalidFilePath);
 } catch (error) {
@@ -95,21 +97,21 @@ asyncErrorHandling().catch(console.error);
 
 /**
  * Example output:
- * 
+ *
  * === Error Handling Example ===
- * 
+ *
  * 1. Loading a non-existent file:
  *   FileNotFoundError: File not found: non-existent-file.darts
- * 
+ *
  * 2. Loading an invalid dictionary file:
  *   InvalidDictionaryError: Invalid dictionary file: ...
- * 
+ *
  * 3. Building a dictionary with empty keys array:
  *   BuildError: Cannot build dictionary with empty keys array
- * 
+ *
  * 4. Building a dictionary with mismatched keys and values arrays:
  *   BuildError: Keys and values arrays must have the same length
- * 
+ *
  * 5. Handling errors in asynchronous API:
  *   DartsError: Failed to save dictionary: ...
  */

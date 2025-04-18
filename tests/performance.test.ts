@@ -1,7 +1,8 @@
-import { Dictionary, Builder, TextDarts } from '../src';
+/* eslint-disable jest/no-disabled-tests, jest/expect-expect, no-console */
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
+import { Dictionary, Builder, TextDarts } from '../src';
 
 // These tests take a long time to run, so they are skipped in CI
 // To run these tests, change describe.skip to describe
@@ -27,7 +28,7 @@ describe.skip('Performance Tests', () => {
     // Generate 10,000 keys (reduced from 100,000 for faster testing)
     console.log('Generating 10,000 keys...');
     const startGenTime = Date.now();
-    for (let i = 0; i < 10000; i++) {
+    for (let i = 0; i < 10000; i += 1) {
       keys.push(`key${i.toString().padStart(6, '0')}`);
       values.push(i);
     }
@@ -56,7 +57,7 @@ describe.skip('Performance Tests', () => {
 
     // Generate 10,000 keys
     console.log('Generating 10,000 keys...');
-    for (let i = 0; i < 10000; i++) {
+    for (let i = 0; i < 10000; i += 1) {
       keys.push(`key${i.toString().padStart(5, '0')}`);
       values.push(i);
     }
@@ -68,7 +69,7 @@ describe.skip('Performance Tests', () => {
     // Perform 1000 searches
     console.log('Performing 1000 searches...');
     const startTime = Date.now();
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 1000; i += 1) {
       const index = Math.floor(Math.random() * 10000);
       const key = `key${index.toString().padStart(5, '0')}`;
       dict.exactMatchSearch(key);
@@ -89,9 +90,9 @@ describe.skip('Performance Tests', () => {
 
     // Generate keys with duplicate prefixes
     console.log('Generating keys with common prefixes...');
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 100; i += 1) {
       const prefix = `prefix${i.toString().padStart(3, '0')}`;
-      for (let j = 0; j < 100; j++) {
+      for (let j = 0; j < 100; j += 1) {
         keys.push(`${prefix}_${j.toString().padStart(3, '0')}`);
         values.push(i * 100 + j);
       }
@@ -104,7 +105,7 @@ describe.skip('Performance Tests', () => {
     // Perform 100 common prefix searches
     console.log('Performing 100 common prefix searches...');
     const startTime = Date.now();
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 100; i += 1) {
       const index = Math.floor(Math.random() * 100);
       const prefix = `prefix${index.toString().padStart(3, '0')}`;
       dict.commonPrefixSearch(prefix);
@@ -125,7 +126,7 @@ describe.skip('Performance Tests', () => {
 
     // Generate 10,000 keys
     console.log('Generating 10,000 keys...');
-    for (let i = 0; i < 10000; i++) {
+    for (let i = 0; i < 10000; i += 1) {
       keys.push(`key${i.toString().padStart(5, '0')}`);
       values.push(i);
     }
@@ -156,7 +157,7 @@ describe.skip('Performance Tests', () => {
     expect(dict.size()).toBeGreaterThan(0);
 
     // Test 10 random keys
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 10; i += 1) {
       const index = Math.floor(Math.random() * 10000);
       const key = `key${index.toString().padStart(5, '0')}`;
       expect(dict.exactMatchSearch(key)).toBe(index);
@@ -170,7 +171,7 @@ describe.skip('Performance Tests', () => {
 
     // Generate 1000 words
     console.log('Generating 1000 words...');
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 1000; i += 1) {
       words.push(`word${i.toString().padStart(4, '0')}`);
     }
 
@@ -181,7 +182,7 @@ describe.skip('Performance Tests', () => {
     // Generate a large text with some of the words
     console.log('Generating test text...');
     let text = '';
-    for (let i = 0; i < 1000; i++) {
+    for (let i = 0; i < 1000; i += 1) {
       if (i % 10 === 0) {
         // Insert a dictionary word every 10 words
         const wordIndex = Math.floor(Math.random() * 1000);

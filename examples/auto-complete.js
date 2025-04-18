@@ -1,11 +1,13 @@
 /**
  * Auto-complete feature example
- * 
+ *
  * This sample implements an auto-complete feature using Darts.
  */
 
-const { buildDictionary } = require('../dist');
+/* eslint-disable @typescript-eslint/no-require-imports, import/order, no-console, no-plusplus */
+
 const readline = require('readline');
+const { buildDictionary } = require('../dist');
 
 // Dictionary data for auto-completion
 const words = [
@@ -33,7 +35,7 @@ const words = [
   'branch',
   'bread',
   'break',
-  'breakfast'
+  'breakfast',
 ];
 
 // Build the dictionary (values are word indices)
@@ -47,18 +49,18 @@ const dict = buildDictionary(words);
  */
 function getCompletions(prefix, limit = 5) {
   if (!prefix) return [];
-  
+
   // Get candidates using common prefix search
   const results = [];
-  
+
   // Check if each word starts with the prefix
-  for (let i = 0; i < words.length; i++) {
+  for (let i = 0; i < words.length; i += 1) {
     if (words[i].startsWith(prefix)) {
       results.push(words[i]);
       if (results.length >= limit) break;
     }
   }
-  
+
   return results;
 }
 
@@ -68,7 +70,7 @@ console.log('Type characters to see suggestions. Type "exit" to quit.');
 
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout
+  output: process.stdout,
 });
 
 function prompt() {
@@ -78,9 +80,9 @@ function prompt() {
       dict.dispose();
       return;
     }
-    
+
     const completions = getCompletions(input);
-    
+
     if (completions.length > 0) {
       console.log('Completion candidates:');
       completions.forEach((word, i) => {
@@ -89,7 +91,7 @@ function prompt() {
     } else {
       console.log('No candidates found');
     }
-    
+
     prompt();
   });
 }
@@ -98,7 +100,7 @@ prompt();
 
 /**
  * Example output:
- * 
+ *
  * === Auto-Complete Demo ===
  * Type characters to see suggestions. Type "exit" to quit.
  * > a

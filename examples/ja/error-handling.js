@@ -1,9 +1,10 @@
 /**
  * エラーハンドリングの例
- * 
+ *
  * このサンプルでは、node-dartsのエラーハンドリング方法を示します。
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports, no-console, @typescript-eslint/no-unused-vars */
 const path = require('path');
 const fs = require('fs');
 const {
@@ -13,7 +14,7 @@ const {
   DartsError,
   FileNotFoundError,
   InvalidDictionaryError,
-  BuildError
+  BuildError,
 } = require('../../dist');
 
 console.log('=== エラーハンドリングの例 ===');
@@ -36,11 +37,11 @@ try {
   // 無効なファイルを作成
   const invalidFilePath = path.join(__dirname, 'invalid.darts');
   fs.writeFileSync(invalidFilePath, 'This is not a valid darts file');
-  
+
   // Dictionary クラスを使用する方法
   const dict = new Dictionary();
   dict.loadSync(invalidFilePath);
-  
+
   // テスト後にファイルを削除
   fs.unlinkSync(invalidFilePath);
 } catch (error) {

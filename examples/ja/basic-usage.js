@@ -8,6 +8,7 @@
  * 4. 共通接頭辞検索
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports, no-console, */
 const { loadDictionary, TextDarts, buildAndSaveDictionary } = require('../../dist');
 
 // まず、サンプル辞書ファイルを作成します
@@ -30,7 +31,7 @@ async function main() {
 
     // 読み込んだ辞書を使ったテキスト置換
     console.log('\n--- テキスト置換 ---');
-    const text = "私はりんごとパイナップルが朝食に好きです。";
+    const text = '私はりんごとパイナップルが朝食に好きです。';
     console.log(`元のテキスト: "${text}"`);
 
     // 関数を使った単語の置換
@@ -40,11 +41,11 @@ async function main() {
 
     // オブジェクトマッピングを使った単語の置換
     const mapping = {
-      'りんご': '🍎',
-      'パイナップル': '🍍',
-      'バナナ': '🍌',
-      'オレンジ': '🍊',
-      'いちご': '🍓'
+      りんご: '🍎',
+      パイナップル: '🍍',
+      バナナ: '🍌',
+      オレンジ: '🍊',
+      いちご: '🍓',
     };
     const replaced2 = dict.replaceWords(text, mapping);
     console.log(`絵文字付き: "${replaced2}"`);

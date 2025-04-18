@@ -1,3 +1,4 @@
+/* eslint-disable max-classes-per-file */
 /**
  * Base error class for Darts library
  */

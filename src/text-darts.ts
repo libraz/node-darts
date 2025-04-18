@@ -6,8 +6,8 @@
  */
 
 import * as fs from 'fs';
-import { Dictionary } from './core/dictionary';
-import { Builder } from './core/builder';
+import Dictionary from './core/dictionary';
+import Builder from './core/builder';
 import { WordReplacer, TraverseCallback, BuildOptions } from './core/types';
 import { dartsNative } from './core/native';
 import { FileNotFoundError } from './core/errors';
@@ -23,9 +23,11 @@ const registry = new FinalizationRegistry((handle: number) => {
 /**
  * TextDarts class - A class-based interface similar to Perl's Text::Darts
  */
-export class TextDarts {
+export default class TextDarts {
   private dictionary: Dictionary;
+
   private words: string[];
+
   private isDisposed: boolean;
 
   /**
@@ -37,7 +39,7 @@ export class TextDarts {
     this.dictionary = dictionary;
     this.words = words;
     this.isDisposed = false;
-    
+
     // Register for automatic cleanup when garbage collected
     registry.register(this, dictionary.getHandle(), this);
   }
@@ -51,9 +53,8 @@ export class TextDarts {
   public static new(source: string[] | string, values?: number[]): TextDarts {
     if (Array.isArray(source)) {
       return TextDarts.build(source, values);
-    } else {
-      return TextDarts.load(source);
     }
+    return TextDarts.load(source);
   }
 
   /**
@@ -74,18 +75,18 @@ export class TextDarts {
    * @param filePath Path to the dictionary file
    * @returns A new TextDarts object
    */
-   public static load(filePath: string): TextDarts {
-     // Check if file exists
-     if (!fs.existsSync(filePath)) {
-       throw new FileNotFoundError(filePath);
-     }
-     
-     const dictionary = new Dictionary();
-     dictionary.loadSync(filePath);
-     // Note: We don't have the original words in this case
-     // This will limit the functionality of replaceWords
-     return new TextDarts(dictionary, []);
-   }
+  public static load(filePath: string): TextDarts {
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      throw new FileNotFoundError(filePath);
+    }
+
+    const dictionary = new Dictionary();
+    dictionary.loadSync(filePath);
+    // Note: We don't have the original words in this case
+    // This will limit the functionality of replaceWords
+    return new TextDarts(dictionary, []);
+  }
 
   /**
    * Builds a dictionary and saves it to a file
@@ -196,7 +197,7 @@ export class TextDarts {
    */
   public size(): number {
     this.ensureNotDisposed();
-    
+
     // If we have words array, return its size
     if (this.words && this.words.length > 0) {
       return this.words.length;
@@ -204,7 +205,7 @@ export class TextDarts {
     // Otherwise fall back to dictionary size
     return this.dictionary.size();
   }
-  
+
   /**
    * Ensures the object is not disposed
    * @throws Error if the object is disposed
@@ -222,13 +223,13 @@ export class TextDarts {
     if (this.isDisposed) {
       return;
     }
-    
+
     // Explicitly release resources
     this.dictionary.dispose();
-    
+
     // Unregister from FinalizationRegistry
     registry.unregister(this);
-    
+
     // Mark as disposed
     this.isDisposed = true;
   }
@@ -238,6 +239,7 @@ export class TextDarts {
    * @returns The Dictionary object
    * @internal
    */
+  // eslint-disable-next-line no-underscore-dangle
   get _dictionary(): Dictionary {
     this.ensureNotDisposed();
     return this.dictionary;

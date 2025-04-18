@@ -8,20 +8,16 @@
  */
 
 // Import classes
-import { Dictionary } from './core/dictionary';
-import { Builder } from './core/builder';
-import { TextDarts } from './text-darts';
+import Dictionary from './core/dictionary';
+import Builder from './core/builder';
+import TextDarts from './text-darts';
 
 // Import type definitions
-import { TraverseResult, TraverseCallback, BuildOptions, WordReplacer } from './core/types';
-
+// import { TraverseResult, TraverseCallback, BuildOptions, WordReplacer } from './core/types';
+import { BuildOptions } from './core/types';
+/*
 // Import error classes
-import {
-  DartsError,
-  FileNotFoundError,
-  InvalidDictionaryError,
-  BuildError
-} from './core/errors';
+import { DartsError, FileNotFoundError, InvalidDictionaryError, BuildError } from './core/errors';
 
 // Import utility functions
 import {
@@ -30,24 +26,20 @@ import {
   ensureDirectoryExists,
   sortStrings,
   uniqueArray,
-  sortAndUniqueStrings
+  sortAndUniqueStrings,
 } from './core/utils';
+*/
 
 // Export classes
-export { Dictionary } from './core/dictionary';
-export { Builder } from './core/builder';
-export { TextDarts } from './text-darts';
+export { default as Dictionary } from './core/dictionary';
+export { default as Builder } from './core/builder';
+export { default as TextDarts } from './text-darts';
 
 // Export type definitions
 export { TraverseResult, TraverseCallback, BuildOptions, WordReplacer } from './core/types';
 
 // Export error classes
-export {
-  DartsError,
-  FileNotFoundError,
-  InvalidDictionaryError,
-  BuildError
-} from './core/errors';
+export { DartsError, FileNotFoundError, InvalidDictionaryError, BuildError } from './core/errors';
 
 // Export utility functions
 export {
@@ -56,7 +48,7 @@ export {
   ensureDirectoryExists,
   sortStrings,
   uniqueArray,
-  sortAndUniqueStrings
+  sortAndUniqueStrings,
 } from './core/utils';
 
 /**
@@ -65,7 +57,7 @@ export {
  * @example
  * ```typescript
  * import { createDictionary } from 'node-darts';
- * 
+ *
  * const dict = createDictionary();
  * dict.loadSync('/path/to/dictionary.darts');
  * const result = dict.exactMatchSearch('hello');
@@ -81,7 +73,7 @@ export function createDictionary(): Dictionary {
  * @example
  * ```typescript
  * import { createBuilder } from 'node-darts';
- * 
+ *
  * const builder = createBuilder();
  * const keys = ['apple', 'banana', 'orange'];
  * const dict = builder.build(keys);
@@ -100,7 +92,7 @@ export function createBuilder(): Builder {
  * @example
  * ```typescript
  * import { loadDictionary } from 'node-darts';
- * 
+ *
  * const dict = loadDictionary('/path/to/dictionary.darts');
  * const result = dict.exactMatchSearch('hello');
  * ```
@@ -120,13 +112,17 @@ export function loadDictionary(filePath: string): Dictionary {
  * @example
  * ```typescript
  * import { buildDictionary } from 'node-darts';
- * 
+ *
  * const keys = ['apple', 'banana', 'orange'];
  * const values = [1, 2, 3];
  * const dict = buildDictionary(keys, values);
  * ```
  */
-export function buildDictionary(keys: string[], values?: number[], options?: BuildOptions): Dictionary {
+export function buildDictionary(
+  keys: string[],
+  values?: number[],
+  options?: BuildOptions
+): Dictionary {
   const builder = new Builder();
   return builder.build(keys, values, options);
 }
@@ -141,7 +137,7 @@ export function buildDictionary(keys: string[], values?: number[], options?: Bui
  * @example
  * ```typescript
  * import { buildAndSaveDictionary } from 'node-darts';
- * 
+ *
  * const keys = ['apple', 'banana', 'orange'];
  * const values = [1, 2, 3];
  * const result = await buildAndSaveDictionary(keys, '/path/to/output.darts', values);
@@ -166,7 +162,7 @@ export async function buildAndSaveDictionary(
  * @example
  * ```typescript
  * import { buildAndSaveDictionarySync } from 'node-darts';
- * 
+ *
  * const keys = ['apple', 'banana', 'orange'];
  * const values = [1, 2, 3];
  * const result = buildAndSaveDictionarySync(keys, '/path/to/output.darts', values);

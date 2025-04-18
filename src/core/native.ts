@@ -1,5 +1,6 @@
 import bindings from 'bindings';
-import { DartsNative, TraverseResult, TraverseCallback } from './types';
+import * as fs from 'fs';
+import { DartsNative, TraverseCallback } from './types';
 import { DartsError, FileNotFoundError, InvalidDictionaryError, BuildError } from './errors';
 
 // Load native module
@@ -14,6 +15,7 @@ export class DartsNativeWrapper implements DartsNative {
    * Creates a dictionary object
    * @returns dictionary handle
    */
+  // eslint-disable-next-line class-methods-use-this
   createDictionary(): number {
     try {
       const handle = native.createDictionary();
@@ -25,7 +27,9 @@ export class DartsNativeWrapper implements DartsNative {
       if (error instanceof DartsError) {
         throw error;
       }
-      throw new DartsError(`Failed to create dictionary: ${error instanceof Error ? error.message : String(error)}`);
+      throw new DartsError(
+        `Failed to create dictionary: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -33,11 +37,14 @@ export class DartsNativeWrapper implements DartsNative {
    * Destroys a dictionary object
    * @param handle dictionary handle
    */
+  // eslint-disable-next-line class-methods-use-this
   destroyDictionary(handle: number): void {
     try {
       native.destroyDictionary(handle);
     } catch (error) {
-      throw new DartsError(`Failed to destroy dictionary: ${error instanceof Error ? error.message : String(error)}`);
+      throw new DartsError(
+        `Failed to destroy dictionary: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -47,13 +54,13 @@ export class DartsNativeWrapper implements DartsNative {
    * @param filePath path to the dictionary file
    * @returns true if successful, false otherwise
    */
+  // eslint-disable-next-line class-methods-use-this
   loadDictionary(handle: number, filePath: string): boolean {
     // Check if the file exists
-    const fs = require('fs');
     if (!fs.existsSync(filePath)) {
       throw new FileNotFoundError(filePath);
     }
-    
+
     try {
       const result = native.loadDictionary(handle, filePath);
       if (result === false) {
@@ -79,6 +86,7 @@ export class DartsNativeWrapper implements DartsNative {
    * @param filePath destination file path
    * @returns true if successful, false otherwise
    */
+  // eslint-disable-next-line class-methods-use-this
   saveDictionary(handle: number, filePath: string): boolean {
     try {
       const result = native.saveDictionary(handle, filePath);
@@ -90,7 +98,9 @@ export class DartsNativeWrapper implements DartsNative {
       if (error instanceof DartsError) {
         throw error;
       }
-      throw new DartsError(`Failed to save dictionary: ${error instanceof Error ? error.message : String(error)}`);
+      throw new DartsError(
+        `Failed to save dictionary: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -100,11 +110,14 @@ export class DartsNativeWrapper implements DartsNative {
    * @param key search key
    * @returns the corresponding value if found, -1 otherwise
    */
+  // eslint-disable-next-line class-methods-use-this
   exactMatchSearch(handle: number, key: string): number {
     try {
       return native.exactMatchSearch(handle, key);
     } catch (error) {
-      throw new DartsError(`Failed to perform exact match search: ${error instanceof Error ? error.message : String(error)}`);
+      throw new DartsError(
+        `Failed to perform exact match search: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -114,11 +127,14 @@ export class DartsNativeWrapper implements DartsNative {
    * @param key search key
    * @returns array of found values
    */
+  // eslint-disable-next-line class-methods-use-this
   commonPrefixSearch(handle: number, key: string): number[] {
     try {
       return native.commonPrefixSearch(handle, key);
     } catch (error) {
-      throw new DartsError(`Failed to perform common prefix search: ${error instanceof Error ? error.message : String(error)}`);
+      throw new DartsError(
+        `Failed to perform common prefix search: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -128,11 +144,14 @@ export class DartsNativeWrapper implements DartsNative {
    * @param key search key
    * @param callback callback function
    */
+  // eslint-disable-next-line class-methods-use-this
   traverse(handle: number, key: string, callback: TraverseCallback): void {
     try {
       native.traverse(handle, key, callback);
     } catch (error) {
-      throw new DartsError(`Failed to traverse: ${error instanceof Error ? error.message : String(error)}`);
+      throw new DartsError(
+        `Failed to traverse: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -142,32 +161,33 @@ export class DartsNativeWrapper implements DartsNative {
    * @param values array of values (indices are used if omitted)
    * @returns dictionary handle
    */
+  // eslint-disable-next-line class-methods-use-this
   build(keys: string[], values?: number[]): number {
     try {
       if (!Array.isArray(keys) || keys.length === 0) {
         throw new BuildError('Empty keys array');
       }
-      
+
       // Ensure keys are strings
-      for (const key of keys) {
+      keys.forEach((key) => {
         if (typeof key !== 'string') {
           throw new BuildError('All keys must be strings');
         }
-      }
-      
+      });
+
       // Ensure values are numbers
       if (values !== undefined) {
         if (!Array.isArray(values) || values.length !== keys.length) {
           throw new BuildError('Values array length must match keys array length');
         }
-        
-        for (const value of values) {
+
+        values.forEach((value) => {
           if (typeof value !== 'number') {
             throw new BuildError('All values must be numbers');
           }
-        }
+        });
       }
-      
+
       const handle = native.build(keys, values);
       if (handle === null || handle === undefined) {
         throw new BuildError('Failed to build dictionary');
@@ -186,11 +206,14 @@ export class DartsNativeWrapper implements DartsNative {
    * @param handle dictionary handle
    * @returns size of the dictionary
    */
+  // eslint-disable-next-line class-methods-use-this
   size(handle: number): number {
     try {
       return native.size(handle);
     } catch (error) {
-      throw new DartsError(`Failed to get dictionary size: ${error instanceof Error ? error.message : String(error)}`);
+      throw new DartsError(
+        `Failed to get dictionary size: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 }

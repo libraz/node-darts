@@ -10,7 +10,7 @@ import { FileNotFoundError } from './errors';
 export function fileExists(filePath: string): boolean {
   try {
     return fs.existsSync(filePath);
-  } catch (error) {
+  } catch {
     return false;
   }
 }

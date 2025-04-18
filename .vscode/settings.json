@@ -5,5 +5,7 @@
   "files.eol": "\n",
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": true
-  }
+  },
+  "eslint.nodePath": "./node_modules",
+  "eslint.workingDirectories": [{ "mode": "auto" }]
 }

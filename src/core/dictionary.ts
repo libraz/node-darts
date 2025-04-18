@@ -1,14 +1,16 @@
 import { dartsNative } from './native';
-import { TraverseCallback, TraverseResult, WordReplacer } from './types';
+import { TraverseCallback, WordReplacer } from './types';
 import { DartsError } from './errors';
 
 /**
  * Darts Dictionary class
  * Provides dictionary search using Double-Array Trie
  */
-export class Dictionary {
+export default class Dictionary {
   private handle: number;
+
   private isDisposed: boolean;
+
   private words: string[];
 
   /**
@@ -39,12 +41,12 @@ export class Dictionary {
    */
   public exactMatchSearch(key: string): number {
     this.ensureNotDisposed();
-    
+
     // Return -1 if the dictionary is empty
     if (this.size() === 0) {
       return -1;
     }
-    
+
     return dartsNative.exactMatchSearch(this.handle, key);
   }
 
@@ -56,12 +58,12 @@ export class Dictionary {
    */
   public commonPrefixSearch(key: string): number[] {
     this.ensureNotDisposed();
-    
+
     // Return an empty array if the dictionary is empty
     if (this.size() === 0) {
       return [];
     }
-    
+
     return dartsNative.commonPrefixSearch(this.handle, key);
   }
 
@@ -124,18 +126,18 @@ export class Dictionary {
    */
   public replaceWords(text: string, replacer: WordReplacer): string {
     this.ensureNotDisposed();
-    
+
     let result = '';
     let position = 0;
-    
+
     while (position < text.length) {
       let matchFound = false;
-      
+
       // Try to match words at the current position
-      for (let len = Math.min(50, text.length - position); len > 0; len--) {
+      for (let len = Math.min(50, text.length - position); len > 0; len -= 1) {
         const word = text.substring(position, position + len);
         const value = this.exactMatchSearch(word);
-        
+
         if (value !== -1) {
           // Word found in dictionary
           let replacement;
@@ -146,21 +148,21 @@ export class Dictionary {
             // If it's a replacement map (object)
             replacement = replacer[word] || word;
           }
-          
+
           result += replacement;
           position += len;
           matchFound = true;
           break;
         }
       }
-      
+
       if (!matchFound) {
         // No match found, advance by 1 character
         result += text[position];
-        position++;
+        position += 1;
       }
     }
-    
+
     return result;
   }
 

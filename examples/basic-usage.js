@@ -8,6 +8,8 @@
  * 4. Common prefix search
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports, no-console */
+
 const { loadDictionary, TextDarts, buildAndSaveDictionary } = require('../dist');
 
 // First, let's create a sample dictionary file if it doesn't exist
@@ -30,7 +32,7 @@ async function main() {
 
     // Text replacement using the loaded dictionary
     console.log('\n--- Text Replacement ---');
-    const text = "I like apple and pineapple for breakfast.";
+    const text = 'I like apple and pineapple for breakfast.';
     console.log(`Original text: "${text}"`);
 
     // Replace words using a function
@@ -40,11 +42,11 @@ async function main() {
 
     // Replace words using an object mapping
     const mapping = {
-      'apple': '🍎',
-      'pineapple': '🍍',
-      'banana': '🍌',
-      'orange': '🍊',
-      'strawberry': '🍓'
+      apple: '🍎',
+      pineapple: '🍍',
+      banana: '🍌',
+      orange: '🍊',
+      strawberry: '🍓',
     };
     const replaced2 = dict.replaceWords(text, mapping);
     console.log(`With emojis: "${replaced2}"`);

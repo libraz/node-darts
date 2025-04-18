@@ -1,8 +1,10 @@
 /**
  * Text replacement example using TextDarts
- * 
+ *
  * This example demonstrates how to use the TextDarts class to replace words in text.
  */
+
+/* eslint-disable @typescript-eslint/no-require-imports, no-console */
 
 const { TextDarts } = require('../dist');
 
@@ -14,7 +16,7 @@ const td1 = TextDarts.new(words);
 const td2 = TextDarts.build(words);
 
 // Sample text for replacement
-const text = "ARPANET is a net by ARPA";
+const text = 'ARPANET is a net by ARPA';
 console.log(`Original text: "${text}"`);
 
 // Example 1: Replace words with a callback function
@@ -25,7 +27,7 @@ console.log(`Result: "${result1}"`);
 
 // Example 2: Replace words with a replacement map
 const replacementMap = {};
-words.forEach(word => {
+words.forEach((word) => {
   replacementMap[word] = word.toLowerCase();
 });
 
@@ -74,33 +76,33 @@ console.log(`Resources cleaned up`);
 
 /**
  * Expected output:
- * 
+ *
  * Original text: "ARPANET is a net by ARPA"
- * 
+ *
  * Example 1 - Using callback function:
  * Result: "<<ARPANET>> is a net by <<ARPA>>"
- * 
+ *
  * Example 2 - Using replacement map:
  * Result: "arpanet is a net by arpa"
- * 
+ *
  * Example 3 - Generating HTML links:
  * Result: "<a href="http://dictionary.com/browse/ARPANET">ARPANET</a> is a net by <a href="http://dictionary.com/browse/ARPA">ARPA</a>"
- * 
+ *
  * Example 4 - Building and saving a dictionary:
  * Building dictionary with words: apple, banana, orange, grape
  * Dictionary saved to ./fruits.darts
- * 
+ *
  * Example 5 - Loading a dictionary from file:
  * Dictionary loaded successfully
- * 
+ *
  * Example 6 - Exact match search:
  * Search for 'apple': 0
  * Search for 'banana': 1
  * Search for 'kiwi' (not in dictionary): -1
- * 
+ *
  * Example 7 - Common prefix search:
  * Common prefix search for 'apple': [0]
- * 
+ *
  * Cleaning up resources...
  * Resources cleaned up
  */

@@ -1,6 +1,6 @@
 /**
  * node-darts の辞書構築と保存の例
- * 
+ *
  * このサンプルでは、以下の操作を行います：
  * 1. 辞書ビルダーの作成
  * 2. 辞書の構築と保存
@@ -8,27 +8,21 @@
  * 4. 辞書の検索
  */
 
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-vars, no-restricted-syntax, no-console */
 const path = require('path');
 const fs = require('fs');
 const {
   createBuilder,
   loadDictionary,
   buildAndSaveDictionary,
-  buildAndSaveDictionarySync
+  buildAndSaveDictionarySync,
 } = require('../../dist');
 
 // 辞書ファイルのパス
 const dictPath = path.join(__dirname, 'example-dict.darts');
 
 // 辞書に登録するキーと値
-const keys = [
-  'apple',
-  'application',
-  'banana',
-  'orange',
-  'pineapple',
-  'strawberry'
-];
+const keys = ['apple', 'application', 'banana', 'orange', 'pineapple', 'strawberry'];
 
 const values = [100, 101, 200, 300, 400, 500];
 
@@ -66,24 +60,24 @@ dict.dispose();
 async function asyncExample() {
   // 非同期に辞書を構築して保存
   const asyncDictPath = path.join(__dirname, 'async-example-dict.darts');
-  
+
   console.log('\n辞書を非同期的に構築して保存しています...');
   const asyncResult = await buildAndSaveDictionary(keys, asyncDictPath, values);
   console.log(`辞書の保存結果: ${asyncResult}`);
-  
+
   // 保存した辞書を読み込み
   console.log('辞書を読み込んでいます...');
   const asyncDict = loadDictionary(asyncDictPath);
   console.log('辞書の読み込みに成功しました');
-  
+
   // 辞書を検索
   console.log('\n--- 辞書の検索 ---');
   console.log(`apple: ${asyncDict.exactMatchSearch('apple')}`);
   console.log(`application: ${asyncDict.exactMatchSearch('application')}`);
-  
+
   // リソースを解放
   asyncDict.dispose();
-  
+
   // 一時ファイルを削除
   console.log('\nクリーンアップしています...');
   if (fs.existsSync(dictPath)) {

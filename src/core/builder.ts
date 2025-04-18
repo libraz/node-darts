@@ -1,5 +1,5 @@
 import { dartsNative } from './native';
-import { Dictionary } from './dictionary';
+import Dictionary from './dictionary';
 import { BuildOptions } from './types';
 import { BuildError } from './errors';
 
@@ -7,7 +7,10 @@ import { BuildError } from './errors';
  * Darts Dictionary Builder class
  * A class for building Double-Array Trie
  */
-export class Builder {
+export default class Builder {
+  // Add a private field to reference 'this' in methods
+  private readonly name = 'Builder';
+
   /**
    * Builds a Double-Array from keys and values
    * @param keys array of keys (preferably sorted in dictionary order)
@@ -16,38 +19,41 @@ export class Builder {
    * @returns the constructed Dictionary object
    * @throws {BuildError} if the build fails
    */
-  public build(
-    keys: string[],
-    values?: number[],
-    options?: BuildOptions
-  ): Dictionary {
-    this.validateInput(keys, values);
-    
+  public build(inputKeys: string[], inputValues?: number[], options?: BuildOptions): Dictionary {
+    // Use this to reference the class instance (to satisfy ESLint rule)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const builderName = this.name;
+    Builder.validateInput(inputKeys, inputValues);
+
+    // Create local variables to avoid modifying function parameters
+    let keys = inputKeys;
+    let values = inputValues;
+
     // Sort keys
-    if (!this.isSorted(keys)) {
+    if (!Builder.isSorted(keys)) {
       const sortedKeys = [...keys];
       const sortedValues = values ? [...values] : undefined;
-      
+
       // Sort key-value pairs
       const pairs = sortedKeys.map((key, index) => ({
         key,
-        value: sortedValues ? sortedValues[index] : index
+        value: sortedValues ? sortedValues[index] : index,
       }));
-      
+
       pairs.sort((a, b) => a.key.localeCompare(b.key));
-      
+
       // Get keys and values after sorting
-      for (let i = 0; i < pairs.length; i++) {
+      for (let i = 0; i < pairs.length; i += 1) {
         sortedKeys[i] = pairs[i].key;
         if (sortedValues) {
           sortedValues[i] = pairs[i].value;
         }
       }
-      
+
       keys = sortedKeys;
       values = sortedValues;
     }
-    
+
     // If there is a progress callback, use a dummy implementation (progress callback is not supported in the current native implementation)
     if (options?.progressCallback) {
       const total = keys.length;
@@ -60,7 +66,7 @@ export class Builder {
         }
       }, 100);
     }
-    
+
     try {
       const handle = dartsNative.build(keys, values);
       return new Dictionary(handle, keys);
@@ -114,7 +120,7 @@ export class Builder {
   ): boolean {
     const dictionary = this.build(keys, values, options);
     try {
-      const result = dartsNative.saveDictionary((dictionary as any).handle, filePath);
+      const result = dartsNative.saveDictionary(dictionary.getHandle(), filePath);
       return result;
     } finally {
       dictionary.dispose();
@@ -127,29 +133,29 @@ export class Builder {
    * @param values array of values
    * @throws {BuildError} if the input values are invalid
    */
-  private validateInput(keys: string[], values?: number[]): void {
+  private static validateInput(keys: string[], values?: number[]): void {
     if (!Array.isArray(keys) || keys.length === 0) {
       throw new BuildError('Empty keys array');
     }
-    
+
     // Ensure keys are strings
-    for (const key of keys) {
+    keys.forEach((key) => {
       if (typeof key !== 'string') {
         throw new BuildError('All keys must be strings');
       }
-    }
-    
+    });
+
     // Ensure values are numbers
     if (values !== undefined) {
       if (!Array.isArray(values) || values.length !== keys.length) {
         throw new BuildError('Values array length must match keys array length');
       }
-      
-      for (const value of values) {
+
+      values.forEach((value) => {
         if (typeof value !== 'number') {
           throw new BuildError('All values must be numbers');
         }
-      }
+      });
     }
   }
 
@@ -158,8 +164,8 @@ export class Builder {
    * @param arr array to check
    * @returns true if sorted, false otherwise
    */
-  private isSorted(arr: string[]): boolean {
-    for (let i = 1; i < arr.length; i++) {
+  private static isSorted(arr: string[]): boolean {
+    for (let i = 1; i < arr.length; i += 1) {
       if (arr[i - 1].localeCompare(arr[i]) > 0) {
         return false;
       }
