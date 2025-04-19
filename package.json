@@ -23,6 +23,7 @@
   "scripts": {
     "build": "yarn clean && tsc -p tsconfig.build.cjs.json && tsc -p tsconfig.build.esm.json && yarn build:addon && node scripts/postbuild-copy.cjs",
     "build:addon": "node-gyp rebuild",
+    "build:addon-with-tools": "node scripts/install-build-tools.js && node-gyp rebuild",
     "clean": "rimraf dist lib",
     "lint": "eslint src tests --ext .ts",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
@@ -30,14 +31,14 @@
     "test:coverage": "jest --coverage",
     "prepare": "yarn build",
     "prepublishOnly": "yarn clean && yarn lint && yarn test && yarn build",
-    "install": "node-pre-gyp install --fallback-to-build"
+    "install": "node-pre-gyp install --fallback-to-build || npm run build:addon-with-tools"
   },
   "binary": {
     "module_name": "node_darts",
-    "module_path": "./lib/binding/",
+    "module_path": "./lib/binding/{node_abi}-{platform}-{arch}",
     "host": "https://github.com/libraz/node-darts/releases/download/",
     "remote_path": "{version}",
-    "package_name": "{module_name}-v{version}-{platform}-{arch}.tar.gz"
+    "package_name": "{module_name}-v{version}-{node_abi}-{platform}-{arch}.tar.gz"
   },
   "keywords": [
     "darts",

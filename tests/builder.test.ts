@@ -133,17 +133,9 @@ describe('Builder', () => {
       jest.useRealTimers();
     });
 
-    // Note: The following tests are commented out because they require more complex mocking
-    // that is difficult to set up correctly. We'll focus on other tests that are more reliable.
-    /*
-    it('should rethrow BuildError when native.build throws a BuildError', () => {
-      // This test requires more complex mocking that is difficult to set up correctly
-    });
-
-    it('should throw BuildError when native.build throws a non-BuildError', () => {
-      // This test requires more complex mocking that is difficult to set up correctly
-    });
-    */
+    // Note: Future tests to consider:
+    // 1. Test for rethrowing BuildError when native.build throws a BuildError
+    // 2. Test for throwing BuildError when native.build throws a non-BuildError
   });
 
   describe('buildAndSave', () => {

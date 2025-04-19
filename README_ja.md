@@ -35,6 +35,19 @@ yarn add node-darts
 - Node.js v20.0.0以上
 - C++17をサポートするC++コンパイラ
 
+### Windows環境での要件
+
+Windowsを使用している場合、以下が必要です：
+
+- C++ワークロードを含むVisual Studio Build Tools
+- Python 2.7または3.x
+
+これらの依存関係がない場合、パッケージはインストール時に自動的にインストールを試みます。自動インストールが失敗した場合は、手動でインストールできます：
+
+1. [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)をインストールし、「C++によるデスクトップ開発」ワークロードを選択
+2. [Python](https://www.python.org/downloads/)（2.7または3.x）をインストール
+3. npm設定を行う：`npm config set msvs_version 2019`
+
 ## 基本的な使用方法
 
 ```javascript

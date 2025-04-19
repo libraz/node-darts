@@ -37,10 +37,24 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - name: Install Yarn
         run: npm install -g yarn
+      - name: Setup Windows build environment
+        if: runner.os == 'Windows'
+        run: |
+          echo "Setting up Windows build environment"
+          Add-Content -Path "$env:USERPROFILE\.npmrc" -Value "msvs_version=2022"
       - name: Install dependencies
         run: yarn install
       - name: Build
         run: yarn build
+      - name: List build artifacts (for debugging)
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            dir -r lib
+            dir -r build
+          else
+            find lib -type f | sort
+            find build -type f | sort
+          fi
       - name: Run tests with coverage
         run: yarn test:coverage
       - name: Upload coverage to Codecov

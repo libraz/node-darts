@@ -48,7 +48,15 @@
                   "/std:c++17"
                 ]
               }
-            }
+            },
+            "copies": [
+              {
+                "destination": "<(module_path)",
+                "files": [
+                  "<(PRODUCT_DIR)/node_darts.node"
+                ]
+              }
+            ]
           }
         ],
         [ "OS=='mac'",
