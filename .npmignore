@@ -1,0 +1,30 @@
+# Source files
+src/
+tests/
+examples/
+docs/
+
+# Build files
+build/
+coverage/
+.github/
+.vscode/
+
+# Config files
+.editorconfig
+.eslintrc.js
+.eslintignore
+.prettierrc
+.ncurc.json
+.yarnrc.yml
+jest.config.js
+tsconfig.json
+tsconfig.build.*.json
+
+# Git files
+.git/
+.gitignore
+
+# Misc
+*.log
+*.tgz

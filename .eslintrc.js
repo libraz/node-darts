@@ -1,3 +1,4 @@
+/* eslint-disable import/no-commonjs */
 module.exports = {
   parser: '@typescript-eslint/parser',
   extends: [
@@ -24,6 +25,17 @@ module.exports = {
     jest: true,
   },
   ignorePatterns: ['dist/**/*'],
+  overrides: [
+    {
+      files: ['*.cjs'],
+      rules: {
+        'import/no-commonjs': 'off',
+        '@typescript-eslint/no-var-requires': 'off',
+        'import/no-require': 'off',
+        'import/no-dynamic-require': 'off',
+      },
+    },
+  ],
   rules: {
     'import/extensions': [
       'error',
@@ -36,5 +48,6 @@ module.exports = {
     'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
     'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
     'prettier/prettier': ['error', { endOfLine: 'auto' }],
+    'import/no-commonjs': ['error', { allowRequire: true }],
   },
 }; // eslint-disable-line prettier/prettier

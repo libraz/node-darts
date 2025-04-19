@@ -5,7 +5,6 @@ Node.js Native Addon for Darts (Double-ARray Trie System)
 [![npm version](https://badge.fury.io/js/node-darts.svg)](https://badge.fury.io/js/node-darts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![codecov](https://codecov.io/gh/libraz/node-darts/branch/main/graph/badge.svg)](https://codecov.io/gh/libraz/node-darts)
-[![Test Coverage](https://img.shields.io/badge/coverage-87%25-brightgreen.svg)](https://github.com/libraz/node-darts)
 
 ## Overview
 
@@ -20,6 +19,7 @@ Node.js Native Addon for Darts (Double-ARray Trie System)
 - Traverse the trie structure
 - Asynchronous and synchronous APIs
 - TypeScript support
+- ESModule and CommonJS support
 - Class-based interface similar to Perl's `Text::Darts`
 
 ## Installation
@@ -38,31 +38,35 @@ yarn add node-darts
 ## Basic Usage
 
 ```javascript
+// Using ESM
 import { loadDictionary, TextDarts } from 'node-darts';
+
+// Using CommonJS
+// const { loadDictionary, TextDarts } = require('node-darts');
 
 // Load an existing dictionary file
 const dict = loadDictionary('/path/to/dictionary.darts');
 
 // Text replacement using the loaded dictionary
-const text = "I like apple and pineapple for breakfast.";
+const text = 'I like apple and pineapple for breakfast.';
 const replaced = dict.replaceWords(text, (word) => `<b>${word}</b>`);
 console.log(replaced); // "I like <b>apple</b> and <b>pineapple</b> for breakfast."
 
 // You can also use an object mapping for replacement
 const mapping = {
-  'apple': '🍎',
-  'pineapple': '🍍'
+  apple: '🍎',
+  pineapple: '🍍',
 };
 const replaced2 = dict.replaceWords(text, mapping);
 console.log(replaced2); // "I like 🍎 and 🍍 for breakfast."
 
 // Exact match search
-console.log(dict.exactMatchSearch('apple'));  // Returns the value if found
-console.log(dict.exactMatchSearch('grape'));  // -1 (not found)
+console.log(dict.exactMatchSearch('apple')); // Returns the value if found
+console.log(dict.exactMatchSearch('grape')); // -1 (not found)
 
 // Common prefix search
 const results = dict.commonPrefixSearch('pineapple');
-console.log(results);  // Array of found values
+console.log(results); // Array of found values
 
 // Clean up resources
 dict.dispose();
@@ -149,13 +153,14 @@ The TextDarts class provides a class-based interface similar to Perl's Text::Dar
 The `WordReplacer` type can be either:
 
 1. A function that takes a matched word and returns a replacement string:
+
    ```typescript
-   (match: string) => string
+   (match: string) => string;
    ```
 
 2. An object mapping words to their replacements:
    ```typescript
-   Record<string, string>
+   Record<string, string>;
    ```
 
 ### Build Options
@@ -191,14 +196,14 @@ const values = [1, 2, 3, 4];
 const dict = buildDictionary(keys, values);
 
 // Replace words in text using a function
-const text = "I like apple and pineapple.";
+const text = 'I like apple and pineapple.';
 const replaced = dict.replaceWords(text, (word) => `${word.toUpperCase()}`);
 console.log(replaced); // "I like APPLE and PINEAPPLE."
 
 // Replace words using an object mapping
 const mapping = {
-  'apple': 'red apple',
-  'pineapple': 'yellow pineapple'
+  apple: 'red apple',
+  pineapple: 'yellow pineapple',
 };
 const replaced2 = dict.replaceWords(text, mapping);
 console.log(replaced2); // "I like red apple and yellow pineapple."
@@ -224,7 +229,7 @@ console.log(darts.exactMatchSearch('apple')); // 1
 console.log(darts.commonPrefixSearch('pineapple')); // [1, 4]
 
 // Replace words in text
-const text = "I like apple and pineapple.";
+const text = 'I like apple and pineapple.';
 const replaced = darts.replaceWords(text, (word) => `${word.toUpperCase()}`);
 console.log(replaced); // "I like APPLE and PINEAPPLE."
 
@@ -245,9 +250,7 @@ You can use the `replaceWords` method for more advanced text processing:
 import { TextDarts } from 'node-darts';
 
 // Create a dictionary with terms to highlight
-const terms = [
-  'JavaScript', 'TypeScript', 'Node.js', 'Darts', 'Trie'
-];
+const terms = ['JavaScript', 'TypeScript', 'Node.js', 'Darts', 'Trie'];
 const darts = TextDarts.build(terms);
 
 // Text to process
@@ -290,6 +293,7 @@ This project uses the Darts (Double-ARray Trie System) library, which is distrib
 ## Implementation Notes
 
 The original Darts library has been modified for C++17 compatibility:
+
 - Removed the `register` keyword which is deprecated in C++17
 - No functional changes were made to the library
 - The original copyright and license notices have been preserved

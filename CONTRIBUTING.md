@@ -154,6 +154,8 @@ yarn format
 
 ```
 node-darts/
+├── scripts/                      # Build scripts
+│   └── postbuild-copy.cjs        # Script to copy files after build
 ├── src/                          # Source code
 │   ├── native/                   # C++ native code
 │   │   ├── bindings.cpp          # Node-API bindings entry point
@@ -174,7 +176,8 @@ node-darts/
 │   │   ├── dictionary.ts         # Dictionary class
 │   │   └── utils.ts              # Utility functions
 │   ├── text-darts.ts             # TextDarts class implementation (uses Factory Method pattern)
-│   └── index.ts                  # Package entry point
+│   ├── index.ts                  # Package entry point (CommonJS)
+│   └── index.esm.ts              # ESM wrapper for the native module
 ├── tests/                        # Test directory
 │   ├── dictionary.test.ts        # Dictionary tests
 │   ├── builder.test.ts           # Builder tests
@@ -182,7 +185,11 @@ node-darts/
 │   ├── replaceWords.test.ts      # Text replacement functionality tests
 │   ├── advanced.test.ts          # Advanced feature tests
 │   ├── performance.test.ts       # Performance tests
-│   └── integration.test.ts       # Integration tests
+│   ├── integration.test.ts       # Integration tests
+│   ├── esm-support.test.ts       # ESM support tests
+│   ├── index.esm.test.ts         # ESM wrapper tests
+│   ├── index.esm.error.test.ts   # ESM error handling tests
+│   └── index.esm.exports.test.ts # ESM exports tests
 └── examples/                     # Example code
     ├── basic-usage.js            # Basic usage example
     ├── dictionary-builder.js     # Dictionary builder example
@@ -196,6 +203,9 @@ node-darts/
         ├── auto-complete.js      # Japanese auto-complete example
         ├── error-handling.js     # Japanese error handling example
         └── morphological-analysis.js # Japanese morphological analysis example
+├── tsconfig.json                # TypeScript configuration
+├── tsconfig.build.cjs.json      # TypeScript configuration for CommonJS build
+└── tsconfig.build.esm.json      # TypeScript configuration for ESM build
 ```
 
 ## License

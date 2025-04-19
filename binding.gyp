@@ -2,6 +2,7 @@
   "targets": [
     {
       "target_name": "node_darts",
+      "product_dir": "<(module_path)",
       "sources": [
         "src/native/bindings.cpp",
         "src/native/dictionary.cpp",
@@ -71,5 +72,10 @@
         ]
       ]
     }
-  ]
+  ],
+  "variables": {
+    "module_name": "node_darts",
+    "module_path": "./lib/binding/",
+    "host": "<!(node -e \"console.log(process.platform + '-' + process.arch)\")"
+  }
 }

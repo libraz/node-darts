@@ -4,6 +4,7 @@ Node.js用 Darts（Double-ARray Trie System）ネイティブアドオン
 
 [![npm version](https://badge.fury.io/js/node-darts.svg)](https://badge.fury.io/js/node-darts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![codecov](https://codecov.io/gh/libraz/node-darts/branch/main/graph/badge.svg)](https://codecov.io/gh/libraz/node-darts)
 
 ## 概要
 
@@ -18,6 +19,7 @@ Node.js用 Darts（Double-ARray Trie System）ネイティブアドオン
 - Trie構造のトラバース
 - 非同期および同期API
 - TypeScriptサポート
+- ESModuleとCommonJSのサポート
 - Perlの`Text::Darts`に似たクラスベースのインターフェース
 
 ## インストール
@@ -36,31 +38,35 @@ yarn add node-darts
 ## 基本的な使用方法
 
 ```javascript
+// ESModuleを使用
 import { loadDictionary, TextDarts } from 'node-darts';
+
+// CommonJSを使用
+// const { loadDictionary, TextDarts } = require('node-darts');
 
 // 既存の辞書ファイルを読み込む
 const dict = loadDictionary('/path/to/dictionary.darts');
 
 // 読み込んだ辞書を使用してテキスト置換
-const text = "I like apple and pineapple for breakfast.";
+const text = 'I like apple and pineapple for breakfast.';
 const replaced = dict.replaceWords(text, (word) => `<b>${word}</b>`);
 console.log(replaced); // "I like <b>apple</b> and <b>pineapple</b> for breakfast."
 
 // オブジェクトマッピングを使用した置換も可能
 const mapping = {
-  'apple': '🍎',
-  'pineapple': '🍍'
+  apple: '🍎',
+  pineapple: '🍍',
 };
 const replaced2 = dict.replaceWords(text, mapping);
 console.log(replaced2); // "I like 🍎 and 🍍 for breakfast."
 
 // 完全一致検索
-console.log(dict.exactMatchSearch('apple'));  // 見つかった場合は対応する値を返す
-console.log(dict.exactMatchSearch('grape'));  // -1（見つからない）
+console.log(dict.exactMatchSearch('apple')); // 見つかった場合は対応する値を返す
+console.log(dict.exactMatchSearch('grape')); // -1（見つからない）
 
 // 共通接頭辞検索
 const results = dict.commonPrefixSearch('pineapple');
-console.log(results);  // 見つかった値の配列
+console.log(results); // 見つかった値の配列
 
 // リソースを解放
 dict.dispose();
@@ -147,13 +153,14 @@ TextDartsクラスは、Perlの`Text::Darts`モジュールに似たクラスベ
 `WordReplacer`タイプは以下のいずれかになります：
 
 1. マッチした単語を受け取り、置換文字列を返す関数：
+
    ```typescript
-   (match: string) => string
+   (match: string) => string;
    ```
 
 2. 単語とその置換をマッピングするオブジェクト：
    ```typescript
-   Record<string, string>
+   Record<string, string>;
    ```
 
 ### ビルドオプション
@@ -189,14 +196,14 @@ const values = [1, 2, 3, 4];
 const dict = buildDictionary(keys, values);
 
 // 関数を使用してテキスト内の単語を置換
-const text = "I like apple and pineapple.";
+const text = 'I like apple and pineapple.';
 const replaced = dict.replaceWords(text, (word) => `${word.toUpperCase()}`);
 console.log(replaced); // "I like APPLE and PINEAPPLE."
 
 // オブジェクトマッピングを使用して置換
 const mapping = {
-  'apple': 'red apple',
-  'pineapple': 'yellow pineapple'
+  apple: 'red apple',
+  pineapple: 'yellow pineapple',
 };
 const replaced2 = dict.replaceWords(text, mapping);
 console.log(replaced2); // "I like red apple and yellow pineapple."
@@ -222,7 +229,7 @@ console.log(darts.exactMatchSearch('apple')); // 1
 console.log(darts.commonPrefixSearch('pineapple')); // [1, 4]
 
 // テキスト内の単語を置換
-const text = "I like apple and pineapple.";
+const text = 'I like apple and pineapple.';
 const replaced = darts.replaceWords(text, (word) => `${word.toUpperCase()}`);
 console.log(replaced); // "I like APPLE and PINEAPPLE."
 
@@ -243,9 +250,7 @@ console.log(loadedDarts.exactMatchSearch('apple')); // 見つかった場合は�
 import { TextDarts } from 'node-darts';
 
 // ハイライトする用語を含む辞書を作成
-const terms = [
-  'JavaScript', 'TypeScript', 'Node.js', 'Darts', 'Trie'
-];
+const terms = ['JavaScript', 'TypeScript', 'Node.js', 'Darts', 'Trie'];
 const darts = TextDarts.build(terms);
 
 // 処理するテキスト
@@ -288,6 +293,7 @@ MIT
 ## 実装に関する注意点
 
 オリジナルのDartsライブラリはC++17互換性のために以下の修正を行っています：
+
 - C++17で非推奨となった`register`キーワードを削除
 - ライブラリの機能的な変更は一切行っていません
 - オリジナルの著作権表示とライセンス通知は保持されています

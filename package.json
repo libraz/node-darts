@@ -2,8 +2,17 @@
   "name": "node-darts",
   "version": "1.0.0",
   "description": "Node.js Native Addon for Darts (Double-ARray Trie System)",
-  "main": "dist/index.js",
+  "main": "dist/cjs/index.js",
+  "module": "dist/esm/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/cjs/index.js",
+      "import": "./dist/esm/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist",
     "lib",
@@ -12,7 +21,7 @@
     "include"
   ],
   "scripts": {
-    "build": "tsc && yarn build:addon",
+    "build": "yarn clean && tsc -p tsconfig.build.cjs.json && tsc -p tsconfig.build.esm.json && yarn build:addon && node scripts/postbuild-copy.cjs",
     "build:addon": "node-gyp rebuild",
     "clean": "rimraf dist lib",
     "lint": "eslint src tests --ext .ts",
@@ -20,7 +29,15 @@
     "test": "jest",
     "test:coverage": "jest --coverage",
     "prepare": "yarn build",
-    "prepublishOnly": "yarn clean && yarn lint && yarn test && yarn build"
+    "prepublishOnly": "yarn clean && yarn lint && yarn test && yarn build",
+    "install": "node-pre-gyp install --fallback-to-build"
+  },
+  "binary": {
+    "module_name": "node_darts",
+    "module_path": "./lib/binding/",
+    "host": "https://github.com/libraz/node-darts/releases/download/",
+    "remote_path": "{version}",
+    "package_name": "{module_name}-v{version}-{platform}-{arch}.tar.gz"
   },
   "keywords": [
     "darts",
@@ -51,10 +68,11 @@
     "*.{js,ts}": [
       "eslint --fix",
       "prettier --write",
-      "jest --findRelatedTests"
+      "jest --findRelatedTests --passWithNoTests"
     ]
   },
   "dependencies": {
+    "@mapbox/node-pre-gyp": "^2.0.0",
     "bindings": "^1.5.0",
     "node-addon-api": "^8.3.1"
   },
