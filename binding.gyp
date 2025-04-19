@@ -12,7 +12,6 @@
         "<!@(node -p \"require('node-addon-api').include\")",
         "include",
         "src/native",
-        "<!(xcrun --show-sdk-path)/usr/include/c++/v1"
       ],
       "dependencies": [
         "<!(node -p \"require('node-addon-api').gyp\")"
@@ -49,6 +48,13 @@
                 ]
               }
             }
+          }
+        ],
+        [ "OS=='mac'",
+          {
+            "include_dirs+": [
+              "<!(xcrun --show-sdk-path)/usr/include/c++/v1"
+            ]
           }
         ],
         [
