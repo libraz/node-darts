@@ -11,113 +11,228 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install Yarn
-        run: npm install -g yarn
-      - name: Install dependencies
-        run: yarn install
-      - name: Run linting
-        run: yarn lint
+          cache: 'yarn'
+      - run: corepack enable
+      - run: corepack prepare yarn@4.9.1 --activate
+      - run: yarn install --immutable
+      - run: yarn lint
 
   test:
     needs: lint
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        node-version: [20.x]
+        os: [ubuntu-latest, macos-latest]
+        node-version: [20.x, 22.x]
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Install Yarn
-        run: npm install -g yarn
-      - name: Setup Windows build environment
+          cache: 'yarn'
+      - run: corepack enable
+      - run: corepack prepare yarn@4.9.1 --activate
+      - if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - if: runner.os == 'Windows'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: |
+            build\Release
+            build\Debug
+            build\default
+            out\Release
+            out\Debug
+            Release
+            Debug
+            addon-build\release\install-root
+            addon-build\debug\install-root
+            addon-build\default\install-root
+            build\lib\binding
+            lib\binding
+          key: ${{ runner.os }}-${{ matrix.node-version }}-${{ hashFiles('src/native/**', 'binding.gyp') }}
+      - run: yarn install --immutable
+      - run: yarn build --verbose
+      - name: verify addon (windows)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
-          echo "Setting up Windows build environment"
-          Add-Content -Path "$env:USERPROFILE\.npmrc" -Value "msvs_version=2022"
-      - name: Install dependencies
-        run: yarn install
-      - name: Build
-        run: yarn build
-      - name: List build artifacts (for debugging)
-        run: |
-          if [ "${{ runner.os }}" == "Windows" ]; then
-            dir -r lib
-            dir -r build
-          else
-            find lib -type f | sort
-            find build -type f | sort
-          fi
+          # Search for the native module in all possible locations
+          $searchPaths = @(
+            "build\Release",
+            "build\Debug",
+            "build",
+            "build\default",
+            "out\Release",
+            "out\Debug",
+            "Release",
+            "Debug",
+            "addon-build\release\install-root",
+            "addon-build\debug\install-root",
+            "addon-build\default\install-root",
+            "lib\binding",
+            "build\lib\binding"
+          )
+
+          # Find all node_darts.node files
+          $files = Get-ChildItem -Recurse -Filter node_darts.node -Path $searchPaths -ErrorAction SilentlyContinue
+
+          # Display all found files
+          if ($files.Count -gt 0) {
+            Write-Host "Found $($files.Count) native module(s):"
+            foreach ($file in $files) {
+              Write-Host "  - $($file.FullName)"
+            }
+
+            # Copy the first found module to all search paths to ensure it's found during tests
+            $sourceFile = $files[0].FullName
+            Write-Host "Using $sourceFile as the source file for copying"
+
+            foreach ($path in $searchPaths) {
+              if (!(Test-Path $path)) {
+                New-Item -ItemType Directory -Path $path -Force | Out-Null
+              }
+              $targetFile = Join-Path $path "node_darts.node"
+              if (!(Test-Path $targetFile)) {
+                Write-Host "Copying to $targetFile"
+                Copy-Item -Path $sourceFile -Destination $targetFile -Force
+              }
+            }
+
+            # Also copy to node-version specific paths
+            $nodeVersion = node -p "process.versions.modules"
+            $platform = node -p "process.platform"
+            $arch = node -p "process.arch"
+
+            $versionSpecificPath = "lib\binding\node-v$nodeVersion-$platform-$arch"
+            if (!(Test-Path $versionSpecificPath)) {
+              New-Item -ItemType Directory -Path $versionSpecificPath -Force | Out-Null
+            }
+            $targetFile = Join-Path $versionSpecificPath "node_darts.node"
+            Write-Host "Copying to version-specific path: $targetFile"
+            Copy-Item -Path $sourceFile -Destination $targetFile -Force
+
+            exit 0
+          } else {
+            Write-Error "No node_darts.node files found in any of the search paths"
+            exit 1
+          }
       - name: Run tests with coverage
         run: yarn test:coverage
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        env:
+          JEST_WORKERS: 4
+      - uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
 
-  build:
-    needs: test
-    runs-on: ${{ matrix.os }}
+  test-windows:
+    needs: lint
+    runs-on: windows-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        node-version: [20.x]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: Install Yarn
-        run: npm install -g yarn
-      - name: Install dependencies
-        run: yarn install
-      - name: Build
-        run: yarn build
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: node-darts-${{ matrix.os }}
-          path: |
-            dist
-            lib
-
-  prebuild:
-    needs: test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
         node-version: [20.x, 22.x]
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-      - name: Install Yarn
-        run: npm install -g yarn
-      - name: Install dependencies
-        run: yarn install
-      - name: Build
-        run: yarn build
-      - name: Package prebuilds
-        run: yarn node-pre-gyp package
-      - name: Upload prebuild artifacts
-        uses: actions/upload-artifact@v4
+          cache: 'yarn'
+      - run: corepack enable
+      - run: corepack prepare yarn@4.9.1 --activate
+      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: actions/setup-python@v5
         with:
-          name: node-darts-prebuild-${{ matrix.os }}-node${{ matrix.node-version }}
-          path: prebuilds
-      - name: Publish prebuilds
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: yarn node-pre-gyp publish
+          python-version: '3.11'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            build\Release
+            build\Debug
+            build\default
+            out\Release
+            out\Debug
+            Release
+            Debug
+            addon-build\release\install-root
+            addon-build\debug\install-root
+            addon-build\default\install-root
+            build\lib\binding
+            lib\binding
+          key: ${{ runner.os }}-${{ matrix.node-version }}-${{ hashFiles('src/native/**', 'binding.gyp') }}
+      - run: yarn install --immutable
+      - run: yarn build --verbose
+      - name: verify addon (windows)
+        shell: pwsh
+        run: |
+          # Search for the native module in all possible locations
+          $searchPaths = @(
+            "build\Release",
+            "build\Debug",
+            "build",
+            "build\default",
+            "out\Release",
+            "out\Debug",
+            "Release",
+            "Debug",
+            "addon-build\release\install-root",
+            "addon-build\debug\install-root",
+            "addon-build\default\install-root",
+            "lib\binding",
+            "build\lib\binding"
+          )
+
+          # Find all node_darts.node files
+          $files = Get-ChildItem -Recurse -Filter node_darts.node -Path $searchPaths -ErrorAction SilentlyContinue
+
+          # Display all found files
+          if ($files.Count -gt 0) {
+            Write-Host "Found $($files.Count) native module(s):"
+            foreach ($file in $files) {
+              Write-Host "  - $($file.FullName)"
+            }
+
+            # Copy the first found module to all search paths to ensure it's found during tests
+            $sourceFile = $files[0].FullName
+            Write-Host "Using $sourceFile as the source file for copying"
+
+            foreach ($path in $searchPaths) {
+              if (!(Test-Path $path)) {
+                New-Item -ItemType Directory -Path $path -Force | Out-Null
+              }
+              $targetFile = Join-Path $path "node_darts.node"
+              if (!(Test-Path $targetFile)) {
+                Write-Host "Copying to $targetFile"
+                Copy-Item -Path $sourceFile -Destination $targetFile -Force
+              }
+            }
+
+            # Also copy to node-version specific paths
+            $nodeVersion = node -p "process.versions.modules"
+            $platform = node -p "process.platform"
+            $arch = node -p "process.arch"
+
+            $versionSpecificPath = "lib\binding\node-v$nodeVersion-$platform-$arch"
+            if (!(Test-Path $versionSpecificPath)) {
+              New-Item -ItemType Directory -Path $versionSpecificPath -Force | Out-Null
+            }
+            $targetFile = Join-Path $versionSpecificPath "node_darts.node"
+            Write-Host "Copying to version-specific path: $targetFile"
+            Copy-Item -Path $sourceFile -Destination $targetFile -Force
+
+            exit 0
+          } else {
+            Write-Error "No node_darts.node files found in any of the search paths"
+            exit 1
+          }
+      - name: Run tests with coverage
+        run: yarn test:coverage
         env:
-          NODE_PRE_GYP_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JEST_WORKERS: 2

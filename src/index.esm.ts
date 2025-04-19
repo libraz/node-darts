@@ -5,14 +5,111 @@
  * @packageDocumentation
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
 import { DartsNative, TraverseCallback } from './core/types';
 import { DartsError, FileNotFoundError, InvalidDictionaryError, BuildError } from './core/errors';
 
-// Load native module using require
+// Load native module with more robust error handling
 // Note: In a real ESM environment, we would use createRequire(import.meta.url)
-// but for testing purposes, we're using require directly
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const native: DartsNative = require('bindings')('node_darts');
+let native: DartsNative;
+
+try {
+  // Try standard bindings approach first
+  // ESLint doesn't like dynamic requires in ESM context, but we need it for this fallback mechanism
+  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires, import/no-extraneous-dependencies, global-require
+  const bindingsModule = require('bindings');
+  native = bindingsModule('node_darts');
+} catch (originalError) {
+  // Only attempt fallback in Windows CI environment
+  const isWindows = process.platform === 'win32';
+  const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+
+  if (isWindows && isCI) {
+    console.warn(
+      `WARNING: Failed to load native module using standard bindings in Windows CI environment: ${originalError}`
+    );
+    console.warn('Attempting to use fallback mechanism to locate the module...');
+
+    // Try to find the module in common locations
+    const possiblePaths = [
+      // Standard build paths
+      path.join(process.cwd(), 'build', 'Release', 'node_darts.node'),
+      path.join(process.cwd(), 'build', 'Debug', 'node_darts.node'),
+      path.join(process.cwd(), 'build', 'node_darts.node'),
+      path.join(process.cwd(), 'build', 'default', 'node_darts.node'),
+
+      // Output paths
+      path.join(process.cwd(), 'out', 'Release', 'node_darts.node'),
+      path.join(process.cwd(), 'out', 'Debug', 'node_darts.node'),
+
+      // Direct paths
+      path.join(process.cwd(), 'Release', 'node_darts.node'),
+      path.join(process.cwd(), 'Debug', 'node_darts.node'),
+
+      // Addon build paths
+      path.join(process.cwd(), 'addon-build', 'release', 'install-root', 'node_darts.node'),
+      path.join(process.cwd(), 'addon-build', 'debug', 'install-root', 'node_darts.node'),
+      path.join(process.cwd(), 'addon-build', 'default', 'install-root', 'node_darts.node'),
+
+      // Node version specific paths
+      path.join(
+        process.cwd(),
+        'lib',
+        'binding',
+        `node-v${process.versions.modules}-${process.platform}-${process.arch}`,
+        'node_darts.node'
+      ),
+      path.join(
+        process.cwd(),
+        'compiled',
+        process.version.slice(1),
+        process.platform,
+        process.arch,
+        'node_darts.node'
+      ),
+
+      // Legacy paths
+      path.join(process.cwd(), 'build', 'lib', 'binding', 'node_darts.node'),
+      path.join(process.cwd(), 'lib', 'binding', 'node-v115-win32-x64', 'node_darts.node'),
+    ];
+
+    // Log all paths we're checking
+    console.warn('Checking the following paths:');
+    possiblePaths.forEach((p) => console.warn(` - ${p}`));
+
+    // Initialize a variable to track if we found the module
+    let foundModule = false;
+
+    // Use forEach instead of for...of to satisfy ESLint
+    possiblePaths.forEach((modulePath) => {
+      if (!foundModule && fs.existsSync(modulePath)) {
+        console.warn(`Found native module at: ${modulePath}`);
+        try {
+          // We need to use dynamic require here, but ESLint doesn't like it
+          // So we'll disable the relevant rules for this specific line
+          // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires, import/no-dynamic-require, global-require
+          const dynamicModule = require(modulePath);
+          native = dynamicModule;
+          foundModule = true;
+          console.warn('Successfully loaded native module using fallback mechanism');
+        } catch (requireError) {
+          console.warn(`Failed to require module at ${modulePath}: ${requireError}`);
+        }
+      }
+    });
+
+    if (!foundModule) {
+      console.error('ERROR: Native module not found in any alternative paths');
+      throw new Error(
+        `Failed to load native module using fallback mechanism. Original error: ${originalError}`
+      );
+    }
+  } else {
+    // In non-Windows or non-CI environments, just throw the original error
+    throw originalError;
+  }
+}
 
 /**
  * Wrapper class for native module in ESM context

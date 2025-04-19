@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable import/no-commonjs */
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
@@ -6,8 +8,8 @@ module.exports = {
   transform: {
     '^.+\\.tsx?$': 'ts-jest',
   },
-  // Run tests in serial
-  maxWorkers: 1,
+  // Use environment variable for workers or default to 4
+  maxWorkers: process.env.JEST_WORKERS || 4,
   // Increase timeout
   testTimeout: 30000,
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/**/index.ts'],
