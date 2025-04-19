@@ -65,8 +65,7 @@
             ],
             "cflags_cc": [
               "-std=c++17",
-              "-Wno-unused-command-line-argument",
-              "-Qunused-arguments"
+              "-Wno-unused-command-line-argument"
             ]
           }
         ]
