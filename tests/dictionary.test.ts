@@ -148,4 +148,28 @@ describe('Dictionary', () => {
       }).toThrow();
     });
   });
+
+  // Test for private method getWordByValue
+  describe('getWordByValue', () => {
+    it('should return the word at the given value index', () => {
+      const words = ['apple', 'banana', 'orange'];
+      const dict = buildDictionary(words);
+
+      // Access the private method using reflection
+      // Use type assertion with Dictionary type and access private method
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/dot-notation
+      const getWordByValue = (dict as any).getWordByValue.bind(dict);
+
+      // Test valid indices
+      expect(getWordByValue(0)).toBe('apple');
+      expect(getWordByValue(1)).toBe('banana');
+      expect(getWordByValue(2)).toBe('orange');
+
+      // Test invalid indices
+      expect(getWordByValue(-1)).toBeUndefined();
+      expect(getWordByValue(3)).toBeUndefined();
+
+      dict.dispose();
+    });
+  });
 });

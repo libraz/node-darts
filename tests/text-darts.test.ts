@@ -301,4 +301,32 @@ describe('TextDarts', () => {
       }).toThrow();
     });
   });
+
+  // Note: We can't directly test FinalizationRegistry as it's triggered by garbage collection
+  // Instead, we'll test the dispose method which should clean up resources
+  describe('Resource cleanup', () => {
+    it('should clean up resources when dispose is called', () => {
+      // Create a spy on dartsNative.destroyDictionary
+      const destroySpy = jest.spyOn(
+        jest.requireActual('../src/core/native').dartsNative,
+        'destroyDictionary'
+      );
+
+      // Create a TextDarts instance
+      const td = TextDarts.build(['apple']);
+
+      // Get the handle from the internal dictionary
+      // eslint-disable-next-line no-underscore-dangle
+      td._dictionary.getHandle();
+
+      // Call dispose
+      td.dispose();
+
+      // Verify that destroyDictionary was called
+      expect(destroySpy).toHaveBeenCalled();
+
+      // Restore the original method
+      destroySpy.mockRestore();
+    });
+  });
 });
