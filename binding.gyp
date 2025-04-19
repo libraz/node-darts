@@ -11,12 +11,20 @@
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")",
         "include",
-        "src/native",
-        "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1"
+        "src/native"
       ],
       "dependencies": [
         "<!(node -p \"require('node-addon-api').gyp\")"
       ],
+      "xcode_settings": {
+        "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
+        "CLANG_CXX_LIBRARY": "libc++",
+        "CLANG_CXX_LANGUAGE_STANDARD": "c++17",
+        "OTHER_CPLUSPLUSFLAGS+": [
+          "-Wno-unused-command-line-argument",
+          "-Qunused-arguments"
+        ]
+      },
       "cflags!": [ "-fno-exceptions" ],
       "cflags_cc!": [ "-fno-exceptions" ],
       "defines": [ "NAPI_DISABLE_CPP_EXCEPTIONS" ],
