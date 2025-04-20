@@ -29,6 +29,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "test:coverage:check": "jest --coverage --passWithNoTests --coverageThreshold='{\"global\":{\"branches\":60,\"functions\":95,\"lines\":85,\"statements\":85}}'",
     "prepare": "yarn build",
     "prepublishOnly": "yarn clean && yarn lint && yarn test && yarn build",
     "install": "node-pre-gyp install --fallback-to-build || npm run build:addon-with-tools"
@@ -67,9 +68,12 @@
   },
   "lint-staged": {
     "*.{js,ts}": [
-      "eslint --fix",
+      "eslint --fix --max-warnings=0 --cache",
       "prettier --write",
       "jest --findRelatedTests --passWithNoTests"
+    ],
+    "package.json": [
+      "yarn test:coverage:check"
     ]
   },
   "dependencies": {
@@ -98,7 +102,8 @@
     "typescript": "^5.8.3"
   },
   "volta": {
-    "node": "20.11.1",
-    "yarn": "3.6.4"
-  }
+    "node": "20.19.0",
+    "yarn": "4.9.1"
+  },
+  "packageManager": "yarn@4.9.1"
 }

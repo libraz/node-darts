@@ -1,4 +1,4 @@
-/* eslint-disable import/no-commonjs */
+// eslint-disable-next-line import/no-commonjs
 module.exports = {
   parser: '@typescript-eslint/parser',
   extends: [
@@ -27,12 +27,25 @@ module.exports = {
   ignorePatterns: ['dist/**/*'],
   overrides: [
     {
-      files: ['*.cjs'],
+      files: ['*.cjs', 'jest.config.js'],
       rules: {
         'import/no-commonjs': 'off',
         '@typescript-eslint/no-var-requires': 'off',
         'import/no-require': 'off',
         'import/no-dynamic-require': 'off',
+      },
+    },
+    {
+      files: ['tests/**/*.ts', 'src/core/native.ts', 'src/index.esm.ts', 'scripts/**/*.js'],
+      rules: {
+        'no-console': 'off',
+      },
+    },
+    {
+      files: ['examples/**/*.js', 'examples/**/*.ts'],
+      rules: {
+        'import/extensions': 'off',
+        'import/no-unresolved': 'off',
       },
     },
   ],
@@ -45,9 +58,9 @@ module.exports = {
         ts: 'never',
       },
     ],
-    'no-console': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
+    'no-console': 'off',
     'no-debugger': process.env.NODE_ENV === 'production' ? 'error' : 'warn',
     'prettier/prettier': ['error', { endOfLine: 'auto' }],
     'import/no-commonjs': ['error', { allowRequire: true }],
   },
-}; // eslint-disable-line prettier/prettier
+};

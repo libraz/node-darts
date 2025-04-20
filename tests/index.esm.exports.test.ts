@@ -1,23 +1,80 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import {
-  createDictionary,
-  createBuilder,
-  loadDictionary,
-  buildDictionary,
-  buildAndSaveDictionary,
-  buildAndSaveDictionarySync,
-  Dictionary,
-  Builder,
-  TextDarts,
-} from '../src/index.esm';
+
+// Define types for the imported modules
+interface DictionaryInstance {
+  dispose(): void;
+  exactMatchSearch(key: string): number;
+  loadSync(filePath: string): boolean;
+}
+
+interface BuilderInstance {
+  // Builder interface properties
+  [key: string]: unknown;
+}
+
+interface TextDartsInstance {
+  dispose(): void;
+  exactMatchSearch(key: string): number;
+  replaceWords(text: string, replacements: Record<string, string>): string;
+}
+
+// Type aliases to simplify declarations
+type DictionaryConstructor = new () => DictionaryInstance;
+type BuilderConstructor = new () => BuilderInstance;
+type TextDartsConstructor = {
+  new (): TextDartsInstance;
+  new (keys: string[]): TextDartsInstance;
+  new (keys: string[], values: number[]): TextDartsInstance;
+  new (keys: string[], options: unknown): TextDartsInstance;
+  new: (keys: string[]) => TextDartsInstance;
+};
+
+// Try to import the module, but don't fail if it can't be loaded
+// Using non-null assertion in tests since we check moduleLoadFailed before running tests
+let createDictionary: (options?: unknown) => DictionaryInstance;
+let createBuilder: (options?: unknown) => BuilderInstance;
+let loadDictionary: (filePath: string) => Promise<DictionaryInstance>;
+let buildDictionary: (keys: string[], values?: number[]) => DictionaryInstance;
+let buildAndSaveDictionary: (keys: string[], filePath: string, values?: number[]) => Promise<void>;
+let buildAndSaveDictionarySync: (keys: string[], filePath: string, values?: number[]) => void;
+let Dictionary: DictionaryConstructor;
+let Builder: BuilderConstructor;
+let TextDarts: TextDartsConstructor;
+let moduleLoadFailed = false;
+
+try {
+  // Try to import the module
+  // eslint-disable-next-line global-require, @typescript-eslint/no-require-imports
+  const esm = require('../src/index.esm');
+  createDictionary = esm.createDictionary;
+  createBuilder = esm.createBuilder;
+  loadDictionary = esm.loadDictionary;
+  buildDictionary = esm.buildDictionary;
+  buildAndSaveDictionary = esm.buildAndSaveDictionary;
+  buildAndSaveDictionarySync = esm.buildAndSaveDictionarySync;
+  Dictionary = esm.Dictionary;
+  Builder = esm.Builder;
+  TextDarts = esm.TextDarts;
+} catch (error) {
+  console.warn(`Failed to load module for testing: ${error}`);
+  moduleLoadFailed = true;
+}
 
 /**
  * This test file is for testing the functions exported from src/index.esm.ts.
  * It aims to improve function coverage.
  */
+// If module loading failed, we'll run the tests anyway but they will fail
+// This makes the failure more visible rather than silently skipping tests
 describe('index.esm.ts Exports', () => {
+  // Check if module loading failed before running tests
+  beforeAll(() => {
+    if (moduleLoadFailed) {
+      throw new Error('Native module failed to load. Tests cannot proceed.');
+    }
+  });
   let tempDir: string;
   let dictPath: string;
 

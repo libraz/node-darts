@@ -1,10 +1,52 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { dartsNative, DartsNativeWrapper } from '../src/index.esm';
-import { BuildError } from '../src/core/errors';
 
+// Define types for the imported modules
+interface DartsNativeInterface {
+  createDictionary(): number;
+  destroyDictionary(handle: number): void;
+  loadDictionary(handle: number, filePath: string): boolean;
+  saveDictionary(handle: number, filePath: string): boolean;
+  exactMatchSearch(handle: number, key: string): number;
+  commonPrefixSearch(handle: number, key: string): number[];
+  traverse(
+    handle: number,
+    key: string,
+    callback: (result: { node: number; key: number; value: number }) => boolean
+  ): void;
+  build(keys: string[], values?: number[]): number;
+  size(handle: number): number;
+}
+
+// Try to import the module, but don't fail if it can't be loaded
+let dartsNative: DartsNativeInterface;
+let DartsNativeWrapper: { new (): DartsNativeInterface };
+let BuildError: { new (message: string): Error };
+let moduleLoadFailed = false;
+
+try {
+  // Try to import the module
+  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires, global-require
+  const esm = require('../src/index.esm');
+  dartsNative = esm.dartsNative;
+  DartsNativeWrapper = esm.DartsNativeWrapper;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires, global-require
+  BuildError = require('../src/core/errors').BuildError;
+} catch (error) {
+  console.warn(`Failed to load module for testing: ${error}`);
+  moduleLoadFailed = true;
+}
+
+// If module loading failed, we'll run the tests anyway but they will fail
+// This makes the failure more visible rather than silently skipping tests
 describe('index.esm.ts', () => {
+  // Check if module loading failed before running tests
+  beforeAll(() => {
+    if (moduleLoadFailed) {
+      throw new Error('Native module failed to load. Tests cannot proceed.');
+    }
+  });
   let tempDir: string;
   let dictPath: string;
   let handle: number;

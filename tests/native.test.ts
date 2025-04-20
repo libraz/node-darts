@@ -1,13 +1,65 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { dartsNative, DartsNativeWrapper } from '../src/core/native';
-import { FileNotFoundError, BuildError, DartsError } from '../src/core/errors';
+
+// Define types for the imported modules
+interface DartsNativeInterface {
+  createDictionary(): number;
+  destroyDictionary(handle: number): void;
+  loadDictionary(handle: number, filePath: string): boolean;
+  saveDictionary(handle: number, filePath: string): boolean;
+  exactMatchSearch(handle: number, key: string): number;
+  commonPrefixSearch(handle: number, key: string): number[];
+  traverse(
+    handle: number,
+    key: string,
+    callback: (result: { node: number; key: number; value: number }) => boolean
+  ): void;
+  build(keys: string[], values?: number[]): number;
+  size(handle: number): number;
+}
+
+interface DartsErrorClass {
+  new (message: string): Error;
+}
+
+// Try to import the module, but don't fail if it can't be loaded
+let dartsNative: DartsNativeInterface;
+let DartsNativeWrapper: { new (): DartsNativeInterface };
+let FileNotFoundError: DartsErrorClass;
+let BuildError: DartsErrorClass;
+let DartsError: DartsErrorClass;
+let moduleLoadFailed = false;
+
+try {
+  // Try to import the module
+  // eslint-disable-next-line global-require, @typescript-eslint/no-require-imports
+  const native = require('../src/core/native');
+  dartsNative = native.dartsNative;
+  DartsNativeWrapper = native.DartsNativeWrapper;
+
+  // eslint-disable-next-line global-require, @typescript-eslint/no-require-imports
+  const errors = require('../src/core/errors');
+  FileNotFoundError = errors.FileNotFoundError;
+  BuildError = errors.BuildError;
+  DartsError = errors.DartsError;
+} catch (error) {
+  console.warn(`Failed to load module for testing: ${error}`);
+  moduleLoadFailed = true;
+}
 
 // For error handling tests, we'll use a different approach
 // We'll create a subclass of DartsNativeWrapper and override methods to simulate errors
 
+// If module loading failed, we'll run the tests anyway but they will fail
+// This makes the failure more visible rather than silently skipping tests
 describe('DartsNativeWrapper', () => {
+  // Check if module loading failed before running tests
+  beforeAll(() => {
+    if (moduleLoadFailed) {
+      throw new Error('Native module failed to load. Tests cannot proceed.');
+    }
+  });
   let tempDir: string;
   let dictPath: string;
   let handle: number;
