@@ -1,0 +1,165 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "src/**/*.ts",
+      "src/**/*.d.ts",
+      "tests/**/*.ts",
+      "scripts/**/*.{js,cjs,mjs}",
+      "examples/**/*.{js,ts}",
+      "*.json",
+      "*.{js,cjs,mjs}",
+      "!**/node_modules",
+      "!dist",
+      "!lib",
+      "!build",
+      "!coverage",
+      "!src/native/third_party"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "lineEnding": "lf",
+    "useEditorconfig": true
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "jsxQuoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "es5",
+      "arrowParentheses": "always",
+      "bracketSpacing": true
+    }
+  },
+  "json": {
+    "formatter": {
+      "trailingCommas": "none"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "complexity": {
+        "noForEach": "off",
+        "useLiteralKeys": "error",
+        "useOptionalChain": "error",
+        "useFlatMap": "error",
+        "useArrowFunction": "error",
+        "noUselessConstructor": "error"
+      },
+      "correctness": {
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error",
+        "noUnusedPrivateClassMembers": "error",
+        "noPrecisionLoss": "error",
+        "noConstAssign": "error"
+      },
+      "performance": {
+        "noDelete": "error"
+      },
+      "style": {
+        "useConst": "error",
+        "useTemplate": "error",
+        "useShorthandAssign": "error",
+        "noParameterAssign": "error",
+        "noNonNullAssertion": "warn",
+        "useDefaultParameterLast": "error",
+        "noNegationElse": "error",
+        "useExponentiationOperator": "error",
+        "useImportType": "error",
+        "useExportType": "error",
+        "noUselessElse": "error",
+        "useShorthandFunctionType": "error",
+        "useEnumInitializers": "error",
+        "useSelfClosingElements": "error",
+        "useSingleVarDeclarator": "error",
+        "useNodejsImportProtocol": "error"
+      },
+      "suspicious": {
+        "noVar": "error",
+        "noExplicitAny": "warn",
+        "noConsole": {
+          "level": "warn",
+          "options": { "allow": ["warn", "error", "info"] }
+        },
+        "noDoubleEquals": "error",
+        "noEmptyBlockStatements": "error"
+      }
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["tests/**/*.ts", "scripts/**/*.{js,cjs,mjs}", "src/core/native.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off",
+            "noExplicitAny": "off"
+          },
+          "style": {
+            "noNonNullAssertion": "off"
+          },
+          "correctness": {
+            "noUnusedVariables": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["tests/**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noForEach": "off"
+          },
+          "performance": {
+            "noDelete": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["examples/**/*.{js,ts}"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedVariables": "off",
+            "noUnusedImports": "off"
+          },
+          "suspicious": {
+            "noEmptyBlockStatements": "off",
+            "noConsole": "off"
+          }
+        }
+      }
+    }
+  ]
+}

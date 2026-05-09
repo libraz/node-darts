@@ -5,9 +5,9 @@
  */
 
 // eslint-disable-next-line
-const fs = require('fs');
+const fs = require('node:fs');
 // eslint-disable-next-line
-const path = require('path');
+const path = require('node:path');
 
 // Paths
 const esmDtsPath = path.join(__dirname, '../dist/esm/index.d.ts');

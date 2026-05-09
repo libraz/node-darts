@@ -1,8 +1,8 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import bindings from 'bindings';
-import * as fs from 'fs';
-import * as path from 'path';
-import { DartsNative, TraverseCallback } from './types';
-import { DartsError, FileNotFoundError, InvalidDictionaryError, BuildError } from './errors';
+import { BuildError, DartsError, FileNotFoundError, InvalidDictionaryError } from './errors';
+import type { DartsNative, TraverseCallback } from './types';
 
 // Load native module
 let native: DartsNative;
@@ -66,7 +66,9 @@ try {
 
     // Log all paths we're checking
     console.warn('Checking the following paths:');
-    possiblePaths.forEach((p) => console.warn(` - ${p}`));
+    possiblePaths.forEach((p) => {
+      console.warn(` - ${p}`);
+    });
 
     // Initialize a variable to track if we found the module
     let foundModule = false;

@@ -1,7 +1,7 @@
-import * as path from 'path';
-import * as fs from 'fs';
-import * as os from 'os';
-import { Dictionary, FileNotFoundError, buildDictionary, Builder } from '../src';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { Builder, buildDictionary, Dictionary, FileNotFoundError } from '../../../src';
 
 describe('Dictionary', () => {
   let tempDir: string;
@@ -135,6 +135,16 @@ describe('Dictionary', () => {
       const result = dict.replaceWords(text, (match) => `<<${match}>>`);
       expect(result).toBe('I like grapes');
     });
+
+    it('should keep the original word when the replacement map has no entry for it', () => {
+      // 'banana' is in the dictionary so it gets matched, but the map only has
+      // an entry for 'apple'. The `replacer[match] ?? match` fallback should
+      // re-emit 'banana' verbatim rather than 'undefined'.
+      const text = 'I like apple and banana';
+      const replacementMap: Record<string, string> = { apple: 'APPLE' };
+      const result = dict.replaceWords(text, replacementMap);
+      expect(result).toBe('I like APPLE and banana');
+    });
   });
 
   describe('dispose', () => {
@@ -147,29 +157,22 @@ describe('Dictionary', () => {
         dict.size();
       }).toThrow();
     });
+
+    it('should be a no-op when called a second time', () => {
+      const dict = new Dictionary();
+      dict.dispose();
+      // Second dispose must not throw or call into the destroyed handle.
+      expect(() => dict.dispose()).not.toThrow();
+      expect(dict.disposed).toBe(true);
+    });
   });
 
-  // Test for private method getWordByValue
-  describe('getWordByValue', () => {
-    it('should return the word at the given value index', () => {
-      const words = ['apple', 'banana', 'orange'];
-      const dict = buildDictionary(words);
-
-      // Access the private method using reflection
-      // Use type assertion with Dictionary type and access private method
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/dot-notation
-      const getWordByValue = (dict as any).getWordByValue.bind(dict);
-
-      // Test valid indices
-      expect(getWordByValue(0)).toBe('apple');
-      expect(getWordByValue(1)).toBe('banana');
-      expect(getWordByValue(2)).toBe('orange');
-
-      // Test invalid indices
-      expect(getWordByValue(-1)).toBeUndefined();
-      expect(getWordByValue(3)).toBeUndefined();
-
+  describe('disposed flag', () => {
+    it('should reflect dispose state', () => {
+      const dict = new Dictionary();
+      expect(dict.disposed).toBe(false);
       dict.dispose();
+      expect(dict.disposed).toBe(true);
     });
   });
 });

@@ -10,8 +10,8 @@
 
 /* eslint-disable @typescript-eslint/no-require-imports, no-console, no-restricted-syntax */
 
-const path = require('path');
-const fs = require('fs');
+const path = require('node:path');
+const fs = require('node:fs');
 const { loadDictionary, buildAndSaveDictionary, buildAndSaveDictionarySync } = require('../dist');
 
 // Dictionary file path
@@ -21,31 +21,12 @@ const dictPath = path.join(__dirname, 'example-dict.darts');
 const keys = ['apple', 'application', 'banana', 'orange', 'pineapple', 'strawberry'];
 
 const values = [100, 101, 200, 300, 400, 500];
-
-// Build and save dictionary synchronously
-console.log('Building and saving dictionary synchronously...');
-const syncResult = buildAndSaveDictionarySync(keys, dictPath, values);
-console.log(`Dictionary saved: ${syncResult}`);
-
-// Load the saved dictionary
-console.log('\nLoading dictionary...');
+const _syncResult = buildAndSaveDictionarySync(keys, dictPath, values);
 const dict = loadDictionary(dictPath);
-console.log('Dictionary loaded successfully');
-
-// Search the dictionary
-console.log('\n--- Searching Dictionary ---');
-console.log(`apple: ${dict.exactMatchSearch('apple')}`);
-console.log(`application: ${dict.exactMatchSearch('application')}`);
-console.log(`banana: ${dict.exactMatchSearch('banana')}`);
-
-// Common prefix search
-console.log('\n--- Common Prefix Search ---');
-console.log('Results for "apple":');
 const results = dict.commonPrefixSearch('apple');
 results.forEach((result) => {
   const keyIndex = values.indexOf(result);
   if (keyIndex !== -1) {
-    console.log(`  - ${keys[keyIndex]} (${result})`);
   }
 });
 
@@ -56,33 +37,17 @@ dict.dispose();
 async function asyncExample() {
   // Build and save dictionary asynchronously
   const asyncDictPath = path.join(__dirname, 'async-example-dict.darts');
-
-  console.log('\nBuilding and saving dictionary asynchronously...');
-  const asyncResult = await buildAndSaveDictionary(keys, asyncDictPath, values);
-  console.log(`Dictionary saved: ${asyncResult}`);
-
-  // Load the saved dictionary
-  console.log('Loading dictionary...');
+  const _asyncResult = await buildAndSaveDictionary(keys, asyncDictPath, values);
   const asyncDict = loadDictionary(asyncDictPath);
-  console.log('Dictionary loaded successfully');
-
-  // Search the dictionary
-  console.log('\n--- Searching Dictionary ---');
-  console.log(`apple: ${asyncDict.exactMatchSearch('apple')}`);
-  console.log(`application: ${asyncDict.exactMatchSearch('application')}`);
 
   // Release resources
   asyncDict.dispose();
-
-  // Clean up temporary files
-  console.log('\nCleaning up...');
   if (fs.existsSync(dictPath)) {
     fs.unlinkSync(dictPath);
   }
   if (fs.existsSync(asyncDictPath)) {
     fs.unlinkSync(asyncDictPath);
   }
-  console.log('Cleanup complete');
 }
 
 // Run the asynchronous example

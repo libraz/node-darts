@@ -1,16 +1,16 @@
-import * as path from 'path';
-import * as fs from 'fs';
-import * as os from 'os';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
 import {
-  Dictionary,
   Builder,
-  createDictionary,
-  loadDictionary,
-  buildDictionary,
   buildAndSaveDictionary,
   buildAndSaveDictionarySync,
-  TraverseResult,
-} from '../src';
+  buildDictionary,
+  createDictionary,
+  Dictionary,
+  loadDictionary,
+  type TraverseResult,
+} from '../../src';
 
 describe('Integration Tests', () => {
   let tempDir: string;
@@ -165,24 +165,24 @@ describe('Integration Tests', () => {
         return true; // Continue processing
       });
 
-      // Verify results
-      expect(traverseResults.length).toBeGreaterThan(0);
+      // Verify results: traverse fires once per character of the key.
+      expect(traverseResults.length).toBe('apple'.length);
 
-      // The last result should indicate an exact match
+      // The last result should indicate an exact match.
       const lastResult = traverseResults[traverseResults.length - 1];
+      expect(lastResult.key).toBe('apple'.length);
       expect(lastResult.value).toBe(100); // Value of 'apple'
 
-      // Test interrupting the process midway
+      // Test interrupting the process midway after the third character.
       const limitedResults: TraverseResult[] = [];
 
       dict.traverse('application', (result) => {
         limitedResults.push({ ...result });
-        // Interrupt processing after the 3rd callback
         return limitedResults.length < 3;
       });
 
-      // Note: In the actual implementation, traverse only calls the callback once
-      expect(limitedResults.length).toBe(1);
+      // Should have stopped exactly when the callback returned false.
+      expect(limitedResults.length).toBe(3);
 
       dict.dispose();
     });

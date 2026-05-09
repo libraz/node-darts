@@ -1,75 +1,17 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { BuildError, DartsError, FileNotFoundError } from '../../../src/core/errors';
+import { DartsNativeWrapper, dartsNative } from '../../../src/core/native';
 
-// Define types for the imported modules
-interface DartsNativeInterface {
-  createDictionary(): number;
-  destroyDictionary(handle: number): void;
-  loadDictionary(handle: number, filePath: string): boolean;
-  saveDictionary(handle: number, filePath: string): boolean;
-  exactMatchSearch(handle: number, key: string): number;
-  commonPrefixSearch(handle: number, key: string): number[];
-  traverse(
-    handle: number,
-    key: string,
-    callback: (result: { node: number; key: number; value: number }) => boolean
-  ): void;
-  build(keys: string[], values?: number[]): number;
-  size(handle: number): number;
-}
-
-interface DartsErrorClass {
-  new (message: string): Error;
-}
-
-// Try to import the module, but don't fail if it can't be loaded
-let dartsNative: DartsNativeInterface;
-let DartsNativeWrapper: { new (): DartsNativeInterface };
-let FileNotFoundError: DartsErrorClass;
-let BuildError: DartsErrorClass;
-let DartsError: DartsErrorClass;
-let moduleLoadFailed = false;
-
-try {
-  // Try to import the module
-  // eslint-disable-next-line global-require, @typescript-eslint/no-require-imports
-  const native = require('../src/core/native');
-  dartsNative = native.dartsNative;
-  DartsNativeWrapper = native.DartsNativeWrapper;
-
-  // eslint-disable-next-line global-require, @typescript-eslint/no-require-imports
-  const errors = require('../src/core/errors');
-  FileNotFoundError = errors.FileNotFoundError;
-  BuildError = errors.BuildError;
-  DartsError = errors.DartsError;
-} catch (error) {
-  console.warn(`Failed to load module for testing: ${error}`);
-  moduleLoadFailed = true;
-}
-
-// For error handling tests, we'll use a different approach
-// We'll create a subclass of DartsNativeWrapper and override methods to simulate errors
-
-// If module loading failed, we'll run the tests anyway but they will fail
-// This makes the failure more visible rather than silently skipping tests
 describe('DartsNativeWrapper', () => {
-  // Check if module loading failed before running tests
-  beforeAll(() => {
-    if (moduleLoadFailed) {
-      throw new Error('Native module failed to load. Tests cannot proceed.');
-    }
-  });
   let tempDir: string;
   let dictPath: string;
   let handle: number;
 
   beforeAll(() => {
-    // Create a temporary directory for testing
     tempDir = path.join(os.tmpdir(), `node-darts-native-test-${Date.now()}`);
     fs.mkdirSync(tempDir, { recursive: true });
-
-    // Path to the test dictionary file
     dictPath = path.join(tempDir, 'test.darts');
   });
 
@@ -277,7 +219,7 @@ describe('DartsNativeWrapper', () => {
       const buildHandle = dartsNative.build(keys, values);
 
       // Mock callback
-      const callback = jest.fn();
+      const callback = vi.fn();
 
       // Traverse with 'a' as the key
       dartsNative.traverse(buildHandle, 'a', callback);
@@ -306,21 +248,21 @@ describe('DartsNativeWrapper', () => {
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      destroyDictionary(h: number): void {
+      destroyDictionary(_h: number): void {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const wrapperName = this.name;
         throw new DartsError('Test error');
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      exactMatchSearch(h: number, k: string): number {
+      exactMatchSearch(_h: number, _k: string): number {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const wrapperName = this.name;
         throw new DartsError('Test error');
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      commonPrefixSearch(h: number, k: string): number[] {
+      commonPrefixSearch(_h: number, _k: string): number[] {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const wrapperName = this.name;
         throw new DartsError('Test error');
@@ -329,11 +271,11 @@ describe('DartsNativeWrapper', () => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       traverse(
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        h: number,
+        _h: number,
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        k: string,
+        _k: string,
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        cb: (result: { node: number; key: number; value: number }) => boolean
+        _cb: (result: { node: number; key: number; value: number }) => boolean
       ): void {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const wrapperName = this.name;
@@ -341,7 +283,7 @@ describe('DartsNativeWrapper', () => {
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      size(h: number): number {
+      size(_h: number): number {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const wrapperName = this.name;
         throw new DartsError('Test error');

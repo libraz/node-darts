@@ -6,7 +6,7 @@
 
 /* eslint-disable @typescript-eslint/no-require-imports, global-require, no-console, */
 
-const path = require('path');
+const path = require('node:path');
 const {
   Dictionary,
   Builder,
@@ -16,25 +16,20 @@ const {
   BuildError,
 } = require('../dist');
 
-console.log('=== Error Handling Example ===');
-
 // 1. Loading a non-existent file
 try {
   const dict = new Dictionary();
   dict.loadSync('non-existent-file.darts');
 } catch (error) {
-  console.log('\n1. Loading a non-existent file:');
   if (error instanceof FileNotFoundError) {
-    console.log(`  FileNotFoundError: ${error.message}`);
   } else {
-    console.log(`  Unexpected error: ${error.message}`);
   }
 }
 
 // 2. Loading an invalid dictionary file
 try {
   // Create an invalid file
-  const fs = require('fs');
+  const fs = require('node:fs');
   const invalidFilePath = path.join(__dirname, 'invalid.darts');
   fs.writeFileSync(invalidFilePath, 'This is not a valid darts file');
 
@@ -44,11 +39,8 @@ try {
   // Clean up after test
   fs.unlinkSync(invalidFilePath);
 } catch (error) {
-  console.log('\n2. Loading an invalid dictionary file:');
   if (error instanceof InvalidDictionaryError) {
-    console.log(`  InvalidDictionaryError: ${error.message}`);
   } else {
-    console.log(`  Unexpected error: ${error.message}`);
   }
 }
 
@@ -57,11 +49,8 @@ try {
   const builder = new Builder();
   builder.build([]);
 } catch (error) {
-  console.log('\n3. Building a dictionary with empty keys array:');
   if (error instanceof BuildError) {
-    console.log(`  BuildError: ${error.message}`);
   } else {
-    console.log(`  Unexpected error: ${error.message}`);
   }
 }
 
@@ -70,11 +59,8 @@ try {
   const builder = new Builder();
   builder.build(['a', 'b', 'c'], [1, 2]);
 } catch (error) {
-  console.log('\n4. Building a dictionary with mismatched keys and values arrays:');
   if (error instanceof BuildError) {
-    console.log(`  BuildError: ${error.message}`);
   } else {
-    console.log(`  Unexpected error: ${error.message}`);
   }
 }
 
@@ -84,11 +70,8 @@ async function asyncErrorHandling() {
     const builder = new Builder();
     await builder.buildAndSave(['a', 'b'], '/invalid/path/dict.darts');
   } catch (error) {
-    console.log('\n5. Handling errors in asynchronous API:');
     if (error instanceof DartsError) {
-      console.log(`  DartsError: ${error.message}`);
     } else {
-      console.log(`  Unexpected error: ${error.message}`);
     }
   }
 }

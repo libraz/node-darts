@@ -9,8 +9,8 @@
  */
 
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-vars, no-restricted-syntax, no-console */
-const path = require('path');
-const fs = require('fs');
+const path = require('node:path');
+const fs = require('node:fs');
 const {
   createBuilder,
   loadDictionary,
@@ -25,31 +25,12 @@ const dictPath = path.join(__dirname, 'example-dict.darts');
 const keys = ['apple', 'application', 'banana', 'orange', 'pineapple', 'strawberry'];
 
 const values = [100, 101, 200, 300, 400, 500];
-
-// 同期的に辞書を構築して保存
-console.log('辞書を同期的に構築して保存しています...');
-const syncResult = buildAndSaveDictionarySync(keys, dictPath, values);
-console.log(`辞書の保存結果: ${syncResult}`);
-
-// 保存した辞書を読み込み
-console.log('\n辞書を読み込んでいます...');
+const _syncResult = buildAndSaveDictionarySync(keys, dictPath, values);
 const dict = loadDictionary(dictPath);
-console.log('辞書の読み込みに成功しました');
-
-// 辞書を検索
-console.log('\n--- 辞書の検索 ---');
-console.log(`apple: ${dict.exactMatchSearch('apple')}`);
-console.log(`application: ${dict.exactMatchSearch('application')}`);
-console.log(`banana: ${dict.exactMatchSearch('banana')}`);
-
-// 共通接頭辞検索
-console.log('\n--- 共通接頭辞検索 ---');
-console.log('「apple」の検索結果:');
 const results = dict.commonPrefixSearch('apple');
 for (const result of results) {
   const keyIndex = values.indexOf(result);
   if (keyIndex !== -1) {
-    console.log(`  - ${keys[keyIndex]} (${result})`);
   }
 }
 
@@ -60,33 +41,17 @@ dict.dispose();
 async function asyncExample() {
   // 非同期に辞書を構築して保存
   const asyncDictPath = path.join(__dirname, 'async-example-dict.darts');
-
-  console.log('\n辞書を非同期的に構築して保存しています...');
-  const asyncResult = await buildAndSaveDictionary(keys, asyncDictPath, values);
-  console.log(`辞書の保存結果: ${asyncResult}`);
-
-  // 保存した辞書を読み込み
-  console.log('辞書を読み込んでいます...');
+  const _asyncResult = await buildAndSaveDictionary(keys, asyncDictPath, values);
   const asyncDict = loadDictionary(asyncDictPath);
-  console.log('辞書の読み込みに成功しました');
-
-  // 辞書を検索
-  console.log('\n--- 辞書の検索 ---');
-  console.log(`apple: ${asyncDict.exactMatchSearch('apple')}`);
-  console.log(`application: ${asyncDict.exactMatchSearch('application')}`);
 
   // リソースを解放
   asyncDict.dispose();
-
-  // 一時ファイルを削除
-  console.log('\nクリーンアップしています...');
   if (fs.existsSync(dictPath)) {
     fs.unlinkSync(dictPath);
   }
   if (fs.existsSync(asyncDictPath)) {
     fs.unlinkSync(asyncDictPath);
   }
-  console.log('クリーンアップが完了しました');
 }
 
 // 非同期例を実行

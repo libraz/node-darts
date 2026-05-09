@@ -5,12 +5,12 @@
  * It internally uses the Dictionary and Builder classes.
  */
 
-import * as fs from 'fs';
-import Dictionary from './core/dictionary';
+import * as fs from 'node:fs';
 import Builder from './core/builder';
-import { WordReplacer, TraverseCallback, BuildOptions } from './core/types';
-import { dartsNative } from './core/native';
+import Dictionary from './core/dictionary';
 import { FileNotFoundError } from './core/errors';
+import { dartsNative } from './core/native';
+import type { BuildOptions, TraverseCallback, WordReplacer } from './core/types';
 
 // FinalizationRegistry for automatic resource cleanup
 const registry = new FinalizationRegistry((handle: number) => {

@@ -44,7 +44,6 @@ for (let i = 0; i < words.length; i += 1) {
 
 // Build the dictionary
 const dict = buildDictionary(words);
-console.log('Dictionary built successfully!');
 
 /**
  * Function to perform simple morphological analysis
@@ -95,24 +94,17 @@ const text1 = '私は日本語を勉強しています';
 const text2 = '今日は良い天気です';
 const text3 = '東京に行きたい';
 
-console.log('\n=== Morphological Analysis Example ===');
-
 [text1, text2, text3].forEach((text) => {
-  console.log(`\nInput: ${text}`);
-  console.log('Analysis results:');
-
   const analyzed = analyzeText(text);
   analyzed.forEach((item) => {
     // Use posMap to get the part-of-speech for the word
     const pos = item.word in posMap ? posMap[item.word] : -1;
-    const posName = pos === -1 ? posNames[5] : posNames[pos];
-    console.log(`  "${item.word}" - ${posName}`);
+    const _posName = pos === -1 ? posNames[5] : posNames[pos];
   });
 });
 
 // Release resources
 dict.dispose();
-console.log('\nDictionary resources released.');
 
 /**
  * Example output:

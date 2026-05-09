@@ -1,6 +1,9 @@
-import { dartsNative } from './native';
-import { TraverseCallback, WordReplacer } from './types';
 import { DartsError } from './errors';
+import { dartsNative } from './native';
+import type { TraverseCallback, WordReplacer } from './types';
+
+/** Maximum length of a single match attempted by replaceWords. */
+const REPLACE_WORDS_MAX_LEN = 50;
 
 /**
  * Darts Dictionary class
@@ -11,17 +14,13 @@ export default class Dictionary {
 
   private isDisposed: boolean;
 
-  private words: string[];
-
   /**
    * Constructor
    * @param handle Dictionary handle (optional)
-   * @param words Array of words (optional)
    */
-  constructor(handle?: number, words?: string[]) {
-    this.handle = handle !== undefined ? handle : dartsNative.createDictionary();
+  constructor(handle?: number) {
+    this.handle = handle === undefined ? dartsNative.createDictionary() : handle;
     this.isDisposed = false;
-    this.words = words || [];
   }
 
   /**
@@ -34,6 +33,13 @@ export default class Dictionary {
   }
 
   /**
+   * Reports whether the dictionary has been disposed.
+   */
+  public get disposed(): boolean {
+    return this.isDisposed;
+  }
+
+  /**
    * Performs an exact match search
    * @param key search key
    * @returns the corresponding value if found, -1 otherwise
@@ -42,7 +48,6 @@ export default class Dictionary {
   public exactMatchSearch(key: string): number {
     this.ensureNotDisposed();
 
-    // Return -1 if the dictionary is empty
     if (this.size() === 0) {
       return -1;
     }
@@ -59,7 +64,6 @@ export default class Dictionary {
   public commonPrefixSearch(key: string): number[] {
     this.ensureNotDisposed();
 
-    // Return an empty array if the dictionary is empty
     if (this.size() === 0) {
       return [];
     }
@@ -88,8 +92,7 @@ export default class Dictionary {
   public async load(filePath: string): Promise<boolean> {
     return new Promise((resolve, reject) => {
       try {
-        const result = this.loadSync(filePath);
-        resolve(result);
+        resolve(this.loadSync(filePath));
       } catch (error) {
         reject(error);
       }
@@ -127,29 +130,20 @@ export default class Dictionary {
   public replaceWords(text: string, replacer: WordReplacer): string {
     this.ensureNotDisposed();
 
+    const replaceFn =
+      typeof replacer === 'function' ? replacer : (match: string) => replacer[match] ?? match;
+
     let result = '';
     let position = 0;
 
     while (position < text.length) {
       let matchFound = false;
 
-      // Try to match words at the current position
-      for (let len = Math.min(50, text.length - position); len > 0; len -= 1) {
+      const maxLen = Math.min(REPLACE_WORDS_MAX_LEN, text.length - position);
+      for (let len = maxLen; len > 0; len -= 1) {
         const word = text.substring(position, position + len);
-        const value = this.exactMatchSearch(word);
-
-        if (value !== -1) {
-          // Word found in dictionary
-          let replacement;
-          if (typeof replacer === 'function') {
-            // If it's a callback function
-            replacement = replacer(word);
-          } else {
-            // If it's a replacement map (object)
-            replacement = replacer[word] || word;
-          }
-
-          result += replacement;
+        if (this.exactMatchSearch(word) !== -1) {
+          result += replaceFn(word);
           position += len;
           matchFound = true;
           break;
@@ -157,25 +151,12 @@ export default class Dictionary {
       }
 
       if (!matchFound) {
-        // No match found, advance by 1 character
         result += text[position];
         position += 1;
       }
     }
 
     return result;
-  }
-
-  /**
-   * Gets a word by its value
-   * @param value The value to look up
-   * @returns The corresponding word or undefined if not found
-   */
-  private getWordByValue(value: number): string | undefined {
-    if (this.words.length > value && value >= 0) {
-      return this.words[value];
-    }
-    return undefined;
   }
 
   /**

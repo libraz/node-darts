@@ -5,8 +5,8 @@
  */
 
 /* eslint-disable @typescript-eslint/no-require-imports, no-console, @typescript-eslint/no-unused-vars */
-const path = require('path');
-const fs = require('fs');
+const path = require('node:path');
+const fs = require('node:fs');
 const {
   Dictionary,
   Builder,
@@ -17,18 +17,13 @@ const {
   BuildError,
 } = require('../../dist');
 
-console.log('=== エラーハンドリングの例 ===');
-
 // 1. 存在しないファイルを読み込む
 try {
   const dict = new Dictionary();
   dict.loadSync('non-existent-file.darts');
 } catch (error) {
-  console.log('\n1. 存在しないファイルを読み込む:');
   if (error instanceof FileNotFoundError) {
-    console.log(`  FileNotFoundError: ${error.message}`);
   } else {
-    console.log(`  Unexpected error: ${error.message}`);
   }
 }
 
@@ -45,11 +40,8 @@ try {
   // テスト後にファイルを削除
   fs.unlinkSync(invalidFilePath);
 } catch (error) {
-  console.log('\n2. 無効な辞書ファイルを読み込む:');
   if (error instanceof InvalidDictionaryError) {
-    console.log(`  InvalidDictionaryError: ${error.message}`);
   } else {
-    console.log(`  Unexpected error: ${error.message}`);
   }
 }
 
@@ -58,11 +50,8 @@ try {
   const builder = new Builder();
   builder.build([]);
 } catch (error) {
-  console.log('\n3. 空のキー配列で辞書を構築:');
   if (error instanceof BuildError) {
-    console.log(`  BuildError: ${error.message}`);
   } else {
-    console.log(`  Unexpected error: ${error.message}`);
   }
 }
 
@@ -71,24 +60,18 @@ try {
   const builder = new Builder();
   builder.build(['a', 'b', 'c'], [1, 2]);
 } catch (error) {
-  console.log('\n4. キーと値の配列の長さが一致しない:');
   if (error instanceof BuildError) {
-    console.log(`  BuildError: ${error.message}`);
   } else {
-    console.log(`  Unexpected error: ${error.message}`);
   }
 }
 
 // 5. TextDartsクラスを使用したエラーハンドリング
 try {
   // 存在しないファイルを読み込む
-  const darts = TextDarts.load('non-existent-file.darts');
+  const _darts = TextDarts.load('non-existent-file.darts');
 } catch (error) {
-  console.log('\n5. TextDartsクラスを使用したエラーハンドリング:');
   if (error instanceof FileNotFoundError) {
-    console.log(`  FileNotFoundError: ${error.message}`);
   } else {
-    console.log(`  Unexpected error: ${error.message}`);
   }
 }
 
@@ -98,11 +81,8 @@ async function asyncErrorHandling() {
     // TextDartsクラスの静的メソッドを使用
     await TextDarts.buildAndSave(['a', 'b'], '/invalid/path/dict.darts');
   } catch (error) {
-    console.log('\n6. 非同期APIのエラーハンドリング:');
     if (error instanceof DartsError) {
-      console.log(`  DartsError: ${error.message}`);
     } else {
-      console.log(`  Unexpected error: ${error.message}`);
     }
   }
 }

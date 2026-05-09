@@ -5,7 +5,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-require-imports, import/order, @typescript-eslint/no-unused-vars, no-console */
-const readline = require('readline');
+const readline = require('node:readline');
 const { buildDictionary, TextDarts } = require('../../dist');
 
 // 自動補完用の辞書データ
@@ -64,10 +64,6 @@ function getCompletions(prefix, limit = 5) {
   return results;
 }
 
-// インタラクティブな自動補完デモ
-console.log('=== 自動補完デモ ===');
-console.log('文字を入力すると候補が表示されます。終了するには "exit" と入力してください。');
-
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -87,12 +83,8 @@ function prompt() {
     const completions = getCompletions(input);
 
     if (completions.length > 0) {
-      console.log('補完候補:');
-      completions.forEach((word, i) => {
-        console.log(`  ${i + 1}. ${word}`);
-      });
+      completions.forEach((_word, _i) => {});
     } else {
-      console.log('候補はありません');
     }
 
     prompt();

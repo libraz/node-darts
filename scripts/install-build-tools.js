@@ -4,9 +4,9 @@
  */
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { execSync } = require('child_process');
+const { execSync } = require('node:child_process');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const os = require('os');
+const os = require('node:os');
 
 // Check if running in CI environment
 const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
@@ -18,7 +18,7 @@ if (os.platform() === 'win32') {
   try {
     // Try to detect if build tools are already installed
     const vsOutput = execSync('where cl.exe', { stdio: 'pipe' }).toString();
-    if (vsOutput && vsOutput.includes('cl.exe')) {
+    if (vsOutput?.includes('cl.exe')) {
       console.log('Visual C++ compiler found, skipping installation of build tools');
       process.exit(0);
     }
@@ -31,9 +31,9 @@ if (os.platform() === 'win32') {
       try {
         // Set msvs_version for node-gyp by creating/updating .npmrc
         // eslint-disable-next-line global-require, @typescript-eslint/no-require-imports
-        const fs = require('fs');
+        const fs = require('node:fs');
         // eslint-disable-next-line global-require, @typescript-eslint/no-require-imports
-        const path = require('path');
+        const path = require('node:path');
         const userProfile = process.env.USERPROFILE || process.env.HOME;
         const npmrcPath = path.join(userProfile, '.npmrc');
 
@@ -44,10 +44,10 @@ if (os.platform() === 'win32') {
         }
 
         // Add or update msvs_version
-        if (!npmrcContent.includes('msvs_version=')) {
-          npmrcContent += '\nmsvs_version=2022\n';
-        } else {
+        if (npmrcContent.includes('msvs_version=')) {
           npmrcContent = npmrcContent.replace(/msvs_version=.*(\r?\n|$)/g, 'msvs_version=2022$1');
+        } else {
+          npmrcContent += '\nmsvs_version=2022\n';
         }
 
         // Write back to .npmrc

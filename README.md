@@ -287,6 +287,40 @@ console.log(highlighted);
 darts.dispose();
 ```
 
+## Backends (Darts vs darts-clone)
+
+Two compatible backends are vendored under `src/native/third_party`:
+
+- `darts` (default) — taku910's original Darts library (the package's existing
+  behaviour).
+- `darts-clone` — s-yata's faster, more compact reimplementation, vendored as a
+  Git submodule. Run `git submodule update --init --recursive` after cloning to
+  populate it.
+
+Switch backends at native-build time with the `DARTS_BACKEND` environment
+variable:
+
+```bash
+# Default (taku910/darts)
+yarn build:addon
+
+# darts-clone
+DARTS_BACKEND=clone yarn build:addon
+```
+
+The public JavaScript / TypeScript API is identical for both backends, but a few
+behaviours differ:
+
+- **On-disk format is NOT compatible.** A `.darts` file built with one backend
+  cannot be loaded by the other.
+- darts-clone rejects zero-length keys at build time; the original silently
+  accepts them.
+- darts-clone rejects malformed dictionary files at load time; the original may
+  accept them and crash later.
+
+Tests target the default backend; switching is done at the C++ build layer only
+and requires no JavaScript-side changes.
+
 ## Error Handling
 
 The library provides the following custom error classes:

@@ -1,6 +1,7 @@
 #include "dictionary.h"
 #include <fstream>
 #include <stdexcept>
+#include <vector>
 
 namespace node_darts {
 
@@ -141,18 +142,26 @@ Napi::Value CommonPrefixSearch(const Napi::CallbackInfo& info) {
       Napi::Error::New(env, "Invalid dictionary handle").ThrowAsJavaScriptException();
       return env.Null();
     }
-    
-    // Allow storing up to 100 results
-    const size_t MAX_RESULTS = 100;
-    int results[MAX_RESULTS];
-    
-    size_t num_results = dict->commonPrefixSearch<int>(key.c_str(), results, MAX_RESULTS);
-    
+
+    // The maximum number of common-prefix matches is bounded by the length of
+    // the search key plus one (one match per character position, plus one for
+    // the final node). Allocate exactly that to avoid silent truncation.
+    const size_t capacity = key.length() + 1;
+    std::vector<int> results(capacity);
+
+    size_t num_results = dict->commonPrefixSearch<int>(key.c_str(), results.data(), capacity);
+
+    // Defensive: in case the bound is ever wrong, retry with the reported size.
+    if (num_results > capacity) {
+      results.assign(num_results, 0);
+      num_results = dict->commonPrefixSearch<int>(key.c_str(), results.data(), num_results);
+    }
+
     Napi::Array result_array = Napi::Array::New(env, num_results);
     for (size_t i = 0; i < num_results; i++) {
       result_array[i] = Napi::Number::New(env, results[i]);
     }
-    
+
     return result_array;
   } catch (const std::exception& e) {
     Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();
@@ -162,55 +171,57 @@ Napi::Value CommonPrefixSearch(const Napi::CallbackInfo& info) {
 
 Napi::Value Traverse(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
-  
+
   try {
     if (info.Length() < 3 || !info[0].IsNumber() || !info[1].IsString() || !info[2].IsFunction()) {
       Napi::TypeError::New(env, "Arguments: (handle: number, key: string, callback: function) expected").ThrowAsJavaScriptException();
       return env.Null();
     }
-    
+
     uint32_t handle = info[0].As<Napi::Number>().Uint32Value();
     std::string key = info[1].As<Napi::String>().Utf8Value();
     Napi::Function callback = info[2].As<Napi::Function>();
-    
+
     DartsDict* dict = GetDictionaryFromHandle(handle);
     if (!dict) {
       Napi::Error::New(env, "Invalid dictionary handle").ThrowAsJavaScriptException();
       return env.Null();
     }
-    
+
     // Starting position for traversal
     size_t node_pos = 0;
     size_t key_pos = 0;
     bool continue_traverse = true;
-    
-    // Execute traversal for each character in the key
-    while (key_pos < key.length() && continue_traverse) {
-      int result = dict->traverse(key.c_str() + key_pos, node_pos, key_pos);
-      
+    const size_t key_len = key.length();
+
+    // Execute traversal for each character in the key.
+    // Calling Darts::traverse with len = key_pos + 1 advances exactly one
+    // character per call, so the JS callback fires once per character.
+    while (key_pos < key_len && continue_traverse) {
+      const size_t prev_key_pos = key_pos;
+      int result = dict->traverse(key.c_str(), node_pos, key_pos, key_pos + 1);
+
       // Create result object
       Napi::Object result_obj = Napi::Object::New(env);
-      result_obj.Set("node", Napi::Number::New(env, static_cast<int>(node_pos)));
-      result_obj.Set("key", Napi::Number::New(env, static_cast<int>(key_pos)));
+      result_obj.Set("node", Napi::Number::New(env, static_cast<double>(node_pos)));
+      result_obj.Set("key", Napi::Number::New(env, static_cast<double>(key_pos)));
       result_obj.Set("value", Napi::Number::New(env, result));
-      
+
       // Call the callback function
       Napi::Value callback_result = callback.Call({result_obj});
-      
-      // Stop traversal if callback returns false
+
+      // Stop traversal if callback explicitly returns false
       if (callback_result.IsBoolean() && callback_result.As<Napi::Boolean>().Value() == false) {
         continue_traverse = false;
       }
-      
-      // Also stop if traversal fails
-      if (result < 0) {
-        continue_traverse = false;
+
+      // Stop if no further trie path exists. Darts returns -2 when the next
+      // character is not present, leaving key_pos unchanged.
+      if (result == -2 || key_pos == prev_key_pos) {
+        break;
       }
-      
-      // Move to the next character
-      key_pos++;
     }
-    
+
     return env.Undefined();
   } catch (const std::exception& e) {
     Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();

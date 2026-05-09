@@ -1,16 +1,13 @@
-import { dartsNative } from './native';
 import Dictionary from './dictionary';
-import { BuildOptions } from './types';
 import { BuildError } from './errors';
+import { dartsNative } from './native';
+import type { BuildOptions } from './types';
 
 /**
  * Darts Dictionary Builder class
  * A class for building Double-Array Trie
  */
 export default class Builder {
-  // Add a private field to reference 'this' in methods
-  private readonly name = 'Builder';
-
   /**
    * Builds a Double-Array from keys and values
    * @param keys array of keys (preferably sorted in dictionary order)
@@ -19,57 +16,41 @@ export default class Builder {
    * @returns the constructed Dictionary object
    * @throws {BuildError} if the build fails
    */
+  // eslint-disable-next-line class-methods-use-this
   public build(inputKeys: string[], inputValues?: number[], options?: BuildOptions): Dictionary {
-    // Use this to reference the class instance (to satisfy ESLint rule)
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const builderName = this.name;
     Builder.validateInput(inputKeys, inputValues);
 
-    // Create local variables to avoid modifying function parameters
     let keys = inputKeys;
     let values = inputValues;
 
-    // Sort keys
+    // Sort keys (and values, if provided) together so the native side receives
+    // properly aligned, dictionary-ordered input. The native build also sorts
+    // defensively, but doing it here keeps the JS path consistent.
     if (!Builder.isSorted(keys)) {
-      const sortedKeys = [...keys];
-      const sortedValues = values ? [...values] : undefined;
-
-      // Sort key-value pairs
-      const pairs = sortedKeys.map((key, index) => ({
+      const pairs = keys.map((key, index) => ({
         key,
-        value: sortedValues ? sortedValues[index] : index,
+        value: values ? values[index] : index,
       }));
 
-      pairs.sort((a, b) => a.key.localeCompare(b.key));
+      pairs.sort((a, b) => {
+        if (a.key < b.key) return -1;
+        if (a.key > b.key) return 1;
+        return 0;
+      });
 
-      // Get keys and values after sorting
-      for (let i = 0; i < pairs.length; i += 1) {
-        sortedKeys[i] = pairs[i].key;
-        if (sortedValues) {
-          sortedValues[i] = pairs[i].value;
-        }
-      }
-
-      keys = sortedKeys;
-      values = sortedValues;
+      keys = pairs.map((p) => p.key);
+      values = inputValues ? pairs.map((p) => p.value) : undefined;
     }
 
-    // If there is a progress callback, use a dummy implementation (progress callback is not supported in the current native implementation)
-    if (options?.progressCallback) {
-      const total = keys.length;
-      let current = 0;
-      const interval = setInterval(() => {
-        current = Math.min(current + Math.floor(total / 10), total);
-        options.progressCallback!(current, total);
-        if (current >= total) {
-          clearInterval(interval);
-        }
-      }, 100);
-    }
+    // Build is synchronous; report progress at start and end so callers that
+    // wire up a progressCallback observe deterministic 0/total and total/total.
+    const total = keys.length;
+    options?.progressCallback?.(0, total);
 
     try {
       const handle = dartsNative.build(keys, values);
-      return new Dictionary(handle, keys);
+      options?.progressCallback?.(total, total);
+      return new Dictionary(handle);
     } catch (error) {
       if (error instanceof BuildError) {
         throw error;
@@ -120,8 +101,7 @@ export default class Builder {
   ): boolean {
     const dictionary = this.build(keys, values, options);
     try {
-      const result = dartsNative.saveDictionary(dictionary.getHandle(), filePath);
-      return result;
+      return dartsNative.saveDictionary(dictionary.getHandle(), filePath);
     } finally {
       dictionary.dispose();
     }
@@ -138,14 +118,12 @@ export default class Builder {
       throw new BuildError('Empty keys array');
     }
 
-    // Ensure keys are strings
     keys.forEach((key) => {
       if (typeof key !== 'string') {
         throw new BuildError('All keys must be strings');
       }
     });
 
-    // Ensure values are numbers
     if (values !== undefined) {
       if (!Array.isArray(values) || values.length !== keys.length) {
         throw new BuildError('Values array length must match keys array length');
@@ -160,13 +138,14 @@ export default class Builder {
   }
 
   /**
-   * Checks if an array is sorted
+   * Checks if an array is sorted (using byte-wise comparison to match the
+   * native side's std::sort).
    * @param arr array to check
    * @returns true if sorted, false otherwise
    */
   private static isSorted(arr: string[]): boolean {
     for (let i = 1; i < arr.length; i += 1) {
-      if (arr[i - 1].localeCompare(arr[i]) > 0) {
+      if (arr[i - 1] > arr[i]) {
         return false;
       }
     }

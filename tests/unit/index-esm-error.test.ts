@@ -1,61 +1,19 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
-
-// Define types for the imported modules
-interface DartsNativeInterface {
-  createDictionary(): number;
-  destroyDictionary(handle: number): void;
-  loadDictionary(handle: number, filePath: string): boolean;
-  saveDictionary(handle: number, filePath: string): boolean;
-  exactMatchSearch(handle: number, key: string): number;
-  commonPrefixSearch(handle: number, key: string): number[];
-  traverse(
-    handle: number,
-    key: string,
-    callback: (result: { node: number; key: number; value: number }) => boolean
-  ): void;
-  build(keys: string[], values?: number[]): number;
-  size(handle: number): number;
-}
-
-// Try to import the module, but don't fail if it can't be loaded
-let dartsNative: DartsNativeInterface;
-let moduleLoadFailed = false;
-
-try {
-  // Try to import the module
-  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports, global-require
-  const esm = require('../src/index.esm');
-  dartsNative = esm.dartsNative;
-} catch (error) {
-  console.warn(`Failed to load module for testing: ${error}`);
-  moduleLoadFailed = true;
-}
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { dartsNative } from '../../src/index.esm';
 
 /**
- * This test file is for testing the error handling of src/index.esm.ts in more detail.
- * It aims to improve branch coverage and function coverage.
+ * Tests for the error handling of src/index.esm.ts.
  */
-// If module loading failed, we'll run the tests anyway but they will fail
-// This makes the failure more visible rather than silently skipping tests
 describe('index.esm.ts Error Handling', () => {
-  // Check if module loading failed before running tests
-  beforeAll(() => {
-    if (moduleLoadFailed) {
-      throw new Error('Native module failed to load. Tests cannot proceed.');
-    }
-  });
   let tempDir: string;
   let dictPath: string;
   let handle: number;
 
   beforeAll(() => {
-    // Create a temporary directory for testing
     tempDir = path.join(os.tmpdir(), `node-darts-esm-error-test-${Date.now()}`);
     fs.mkdirSync(tempDir, { recursive: true });
-
-    // Path to the test dictionary file
     dictPath = path.join(tempDir, 'test-esm-error.darts');
   });
 
@@ -235,7 +193,7 @@ describe('index.esm.ts Error Handling', () => {
       const buildHandle = dartsNative.build(keys);
 
       // Mock callback
-      const callback = jest.fn().mockReturnValue(true);
+      const callback = vi.fn().mockReturnValue(true);
 
       // Traverse with an empty key
       dartsNative.traverse(buildHandle, '', callback);
@@ -253,7 +211,7 @@ describe('index.esm.ts Error Handling', () => {
       const buildHandle = dartsNative.build(keys);
 
       // Mock callback that returns false to stop traversal
-      const callback = jest.fn().mockReturnValue(false);
+      const callback = vi.fn().mockReturnValue(false);
 
       // Traverse
       dartsNative.traverse(buildHandle, 'a', callback);

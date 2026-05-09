@@ -4,7 +4,7 @@
  * This file tests the text replacement functionality (replaceWords).
  */
 
-import { buildDictionary, TextDarts } from '../src';
+import { buildDictionary, TextDarts } from '../../src';
 
 describe('replaceWords', () => {
   // テストで使用する変数

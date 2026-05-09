@@ -1,7 +1,7 @@
-import * as path from 'path';
-import * as fs from 'fs';
-import * as os from 'os';
-import { TextDarts, FileNotFoundError } from '../src';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { FileNotFoundError, TextDarts } from '../../src';
 
 describe('TextDarts', () => {
   let tempDir: string;
@@ -305,12 +305,11 @@ describe('TextDarts', () => {
   // Note: We can't directly test FinalizationRegistry as it's triggered by garbage collection
   // Instead, we'll test the dispose method which should clean up resources
   describe('Resource cleanup', () => {
-    it('should clean up resources when dispose is called', () => {
+    it('should clean up resources when dispose is called', async () => {
       // Create a spy on dartsNative.destroyDictionary
-      const destroySpy = jest.spyOn(
-        jest.requireActual('../src/core/native').dartsNative,
-        'destroyDictionary'
-      );
+      const { dartsNative } =
+        await vi.importActual<typeof import('../../src/core/native')>('../../src/core/native');
+      const destroySpy = vi.spyOn(dartsNative, 'destroyDictionary');
 
       // Create a TextDarts instance
       const td = TextDarts.build(['apple']);

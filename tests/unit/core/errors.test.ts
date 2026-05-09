@@ -1,9 +1,9 @@
 import {
+  BuildError,
   DartsError,
   FileNotFoundError,
   InvalidDictionaryError,
-  BuildError,
-} from '../src/core/errors';
+} from '../../../src/core/errors';
 
 describe('Error classes', () => {
   describe('DartsError', () => {

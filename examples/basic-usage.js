@@ -11,9 +11,6 @@
 /* eslint-disable @typescript-eslint/no-require-imports, no-console */
 
 const { loadDictionary, TextDarts, buildAndSaveDictionary } = require('../dist');
-
-// First, let's create a sample dictionary file if it doesn't exist
-console.log('Creating a sample dictionary file...');
 const keys = ['apple', 'banana', 'orange', 'pineapple', 'strawberry'];
 const values = [100, 200, 300, 400, 500];
 
@@ -23,21 +20,11 @@ async function main() {
   try {
     // Build and save the dictionary
     await buildAndSaveDictionary(keys, './fruits.darts', values);
-    console.log('Dictionary saved to ./fruits.darts');
-
-    // Load the dictionary file
-    console.log('\n--- Loading Dictionary ---');
     const dict = loadDictionary('./fruits.darts');
-    console.log('Dictionary loaded successfully');
-
-    // Text replacement using the loaded dictionary
-    console.log('\n--- Text Replacement ---');
     const text = 'I like apple and pineapple for breakfast.';
-    console.log(`Original text: "${text}"`);
 
     // Replace words using a function
-    const replaced = dict.replaceWords(text, (word) => `<b>${word}</b>`);
-    console.log(`With HTML tags: "${replaced}"`);
+    const _replaced = dict.replaceWords(text, (word) => `<b>${word}</b>`);
     // Output: "I like <b>apple</b> and <b>pineapple</b> for breakfast."
 
     // Replace words using an object mapping
@@ -48,33 +35,12 @@ async function main() {
       orange: '🍊',
       strawberry: '🍓',
     };
-    const replaced2 = dict.replaceWords(text, mapping);
-    console.log(`With emojis: "${replaced2}"`);
-    // Output: "I like 🍎 and 🍍 for breakfast."
-
-    // Exact match search
-    console.log('\n--- Exact Match Search ---');
-    console.log(`apple: ${dict.exactMatchSearch('apple')}`);
-    console.log(`banana: ${dict.exactMatchSearch('banana')}`);
-    console.log(`grape (not in dictionary): ${dict.exactMatchSearch('grape')}`);
-
-    // Common prefix search
-    console.log('\n--- Common Prefix Search ---');
-    const results = dict.commonPrefixSearch('pineapple');
-    console.log(`Results for 'pineapple': ${JSON.stringify(results)}`);
-
-    // Alternative: Using TextDarts class
-    console.log('\n--- Using TextDarts Class ---');
+    const _replaced2 = dict.replaceWords(text, mapping);
+    const _results = dict.commonPrefixSearch('pineapple');
     const darts = TextDarts.load('./fruits.darts');
-    console.log('TextDarts object created from dictionary file');
-    const replaced3 = darts.replaceWords(text, mapping);
-    console.log(`With TextDarts: "${replaced3}"`);
-
-    // Clean up resources
-    console.log('\n--- Cleanup ---');
+    const _replaced3 = darts.replaceWords(text, mapping);
     dict.dispose();
     darts.dispose();
-    console.log('Resources disposed');
   } catch (error) {
     console.error('Error:', error);
   }

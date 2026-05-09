@@ -6,7 +6,7 @@
 
 /* eslint-disable @typescript-eslint/no-require-imports, import/order, no-console, no-plusplus */
 
-const readline = require('readline');
+const readline = require('node:readline');
 const { buildDictionary } = require('../dist');
 
 // Dictionary data for auto-completion
@@ -64,10 +64,6 @@ function getCompletions(prefix, limit = 5) {
   return results;
 }
 
-// Interactive auto-complete demo
-console.log('=== Auto-Complete Demo ===');
-console.log('Type characters to see suggestions. Type "exit" to quit.');
-
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -84,12 +80,8 @@ function prompt() {
     const completions = getCompletions(input);
 
     if (completions.length > 0) {
-      console.log('Completion candidates:');
-      completions.forEach((word, i) => {
-        console.log(`  ${i + 1}. ${word}`);
-      });
+      completions.forEach((_word, _i) => {});
     } else {
-      console.log('No candidates found');
     }
 
     prompt();

@@ -7,49 +7,29 @@
  * @packageDocumentation
  */
 
-// Import classes
-import Dictionary from './core/dictionary';
 import Builder from './core/builder';
+import Dictionary from './core/dictionary';
+import type { BuildOptions } from './core/types';
 import TextDarts from './text-darts';
 
-// Import type definitions
-// import { TraverseResult, TraverseCallback, BuildOptions, WordReplacer } from './core/types';
-import { BuildOptions } from './core/types';
-/*
-// Import error classes
-import { DartsError, FileNotFoundError, InvalidDictionaryError, BuildError } from './core/errors';
-
-// Import utility functions
-import {
-  fileExists,
-  validateFilePath,
-  ensureDirectoryExists,
-  sortStrings,
-  uniqueArray,
-  sortAndUniqueStrings,
-} from './core/utils';
-*/
-
+export { default as Builder } from './core/builder';
 // Export classes
 export { default as Dictionary } from './core/dictionary';
-export { default as Builder } from './core/builder';
-export { default as TextDarts } from './text-darts';
+// Export error classes
+export { BuildError, DartsError, FileNotFoundError, InvalidDictionaryError } from './core/errors';
 
 // Export type definitions
-export { TraverseResult, TraverseCallback, BuildOptions, WordReplacer } from './core/types';
-
-// Export error classes
-export { DartsError, FileNotFoundError, InvalidDictionaryError, BuildError } from './core/errors';
-
+export { BuildOptions, TraverseCallback, TraverseResult, WordReplacer } from './core/types';
 // Export utility functions
 export {
-  fileExists,
-  validateFilePath,
   ensureDirectoryExists,
+  fileExists,
+  sortAndUniqueStrings,
   sortStrings,
   uniqueArray,
-  sortAndUniqueStrings,
+  validateFilePath,
 } from './core/utils';
+export { default as TextDarts } from './text-darts';
 
 /**
  * Creates a dictionary

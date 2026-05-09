@@ -12,33 +12,22 @@ const { buildDictionary, TextDarts } = require('../../dist');
 const words = ['apple', 'banana', 'orange'];
 const values = [1, 2, 3];
 
-console.log(`words length: ${words.length}, values length: ${values.length}`);
-
 try {
   // 辞書を構築
   const dict = buildDictionary(words, values);
-  console.log('辞書構築成功！');
-
-  // 検索テスト
-  console.log(`apple: ${dict.exactMatchSearch('apple')}`);
-  console.log(`banana: ${dict.exactMatchSearch('banana')}`);
-  console.log(`orange: ${dict.exactMatchSearch('orange')}`);
 
   // リソースを解放
   dict.dispose();
-  console.log('リソースを解放しました。');
 } catch (error) {
   console.error('エラー:', error);
 }
-
-console.log('辞書構築成功！');
 
 /**
  * 簡易形態素解析を行う関数
  * @param {string} text 解析するテキスト
  * @returns {Array<{word: string, pos: number}>} 解析結果
  */
-function analyzeText(text) {
+function _analyzeText(text) {
   const result = [];
   let position = 0;
 
@@ -75,16 +64,11 @@ function analyzeText(text) {
 }
 
 // 品詞名のマッピング
-const posNames = ['名詞', '助詞', '動詞', '助動詞', '形容詞', '未知語'];
+const _posNames = ['名詞', '助詞', '動詞', '助動詞', '形容詞', '未知語'];
 
 // TextDartsクラスを使用した例
 try {
   const darts = TextDarts.build(['red', 'green', 'blue'], [10, 20, 30]);
-  console.log('TextDarts構築成功！');
-
-  console.log(`red: ${darts.exactMatchSearch('red')}`);
-  console.log(`green: ${darts.exactMatchSearch('green')}`);
-  console.log(`blue: ${darts.exactMatchSearch('blue')}`);
 
   darts.dispose();
 } catch (error) {

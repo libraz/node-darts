@@ -1,8 +1,9 @@
 /* eslint-disable jest/no-disabled-tests, jest/expect-expect, no-console */
-import * as path from 'path';
-import * as fs from 'fs';
-import * as os from 'os';
-import { Dictionary, Builder, TextDarts } from '../src';
+
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { Builder, Dictionary, TextDarts } from '../../src';
 
 // These tests take a long time to run, so they are skipped in CI
 // To run these tests, change describe.skip to describe

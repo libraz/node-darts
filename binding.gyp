@@ -1,7 +1,12 @@
 {
   "variables": {
     "module_name": "node_darts",
-    "module_path": "lib/binding/{node_abi}-{platform}-{arch}"
+    "module_path": "lib/binding/{node_abi}-{platform}-{arch}",
+    # Pick the Darts backend at build time. Override with:
+    #   DARTS_BACKEND=clone yarn build:addon
+    # Default is the original taku910/darts. The s-yata/darts-clone backend
+    # is header-only, so its source list omits darts.cpp.
+    "darts_backend%": "<!(node -p \"process.env.DARTS_BACKEND || 'darts'\")"
   },
   "targets": [
     {
@@ -10,8 +15,7 @@
       "sources": [
         "src/native/bindings.cpp",
         "src/native/dictionary.cpp",
-        "src/native/builder.cpp",
-        "src/native/third_party/darts/darts.cpp"
+        "src/native/builder.cpp"
       ],
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")",
@@ -40,6 +44,15 @@
         ]
       },
       "conditions": [
+        [
+          "darts_backend=='clone'",
+          {
+            "defines": [ "USE_DARTS_CLONE" ]
+          },
+          {
+            "sources": [ "src/native/third_party/darts/darts.cpp" ]
+          }
+        ],
         [
           "OS=='win'",
           {

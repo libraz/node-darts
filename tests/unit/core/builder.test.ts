@@ -1,7 +1,7 @@
-import * as path from 'path';
-import * as fs from 'fs';
-import * as os from 'os';
-import { Builder, Dictionary, BuildError } from '../src';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { BuildError, Builder, Dictionary } from '../../../src';
 
 describe('Builder', () => {
   let tempDir: string;
@@ -104,22 +104,22 @@ describe('Builder', () => {
     });
 
     it('should call progress callback when provided', () => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
 
       const builder = new Builder();
       const keys = ['apple', 'banana', 'orange'];
 
       // Mock progress callback
-      const progressCallback = jest.fn();
+      const progressCallback = vi.fn();
 
       const dict = builder.build(keys, undefined, { progressCallback });
 
       // Fast-forward timers
-      jest.advanceTimersByTime(100);
+      vi.advanceTimersByTime(100);
       expect(progressCallback).toHaveBeenCalled();
 
       // Fast-forward more to trigger clearInterval
-      jest.advanceTimersByTime(1000);
+      vi.advanceTimersByTime(1000);
 
       // Verify the callback was called
       expect(progressCallback).toHaveBeenCalled();
@@ -130,7 +130,7 @@ describe('Builder', () => {
       // Clean up
       dict.dispose();
 
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     // Note: Future tests to consider:

@@ -1,15 +1,15 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { FileNotFoundError } from '../../../src/core/errors';
 import {
-  fileExists,
-  validateFilePath,
   ensureDirectoryExists,
+  fileExists,
+  sortAndUniqueStrings,
   sortStrings,
   uniqueArray,
-  sortAndUniqueStrings,
-} from '../src/core/utils';
-import { FileNotFoundError } from '../src/core/errors';
+  validateFilePath,
+} from '../../../src/core/utils';
 
 describe('Utils', () => {
   let tempDir: string;

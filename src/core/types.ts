@@ -14,7 +14,7 @@ export interface TraverseResult {
  * Type for traverse callback function
  * @returns true to continue processing, false to abort
  */
-export type TraverseCallback = (result: TraverseResult) => boolean | void;
+export type TraverseCallback = (result: TraverseResult) => boolean | undefined;
 
 /**
  * Word replacement function or mapping
