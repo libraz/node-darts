@@ -1,6 +1,6 @@
-import { DartsError } from './errors';
-import { dartsNative } from './native';
-import type { TraverseCallback, WordReplacer } from './types';
+import { DartsError } from './errors.js';
+import { dartsNative } from './native.js';
+import type { TraverseCallback, WordReplacer } from './types.js';
 
 /** Maximum length of a single match attempted by replaceWords. */
 const REPLACE_WORDS_MAX_LEN = 50;

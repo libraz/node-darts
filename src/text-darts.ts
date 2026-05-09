@@ -6,11 +6,11 @@
  */
 
 import * as fs from 'node:fs';
-import Builder from './core/builder';
-import Dictionary from './core/dictionary';
-import { FileNotFoundError } from './core/errors';
-import { dartsNative } from './core/native';
-import type { BuildOptions, TraverseCallback, WordReplacer } from './core/types';
+import Builder from './core/builder.js';
+import Dictionary from './core/dictionary.js';
+import { FileNotFoundError } from './core/errors.js';
+import { dartsNative } from './core/native.js';
+import type { BuildOptions, TraverseCallback, WordReplacer } from './core/types.js';
 
 // FinalizationRegistry for automatic resource cleanup
 const registry = new FinalizationRegistry((handle: number) => {

@@ -1,15 +1,71 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import bindings from 'bindings';
-import { BuildError, DartsError, FileNotFoundError, InvalidDictionaryError } from './errors';
-import type { DartsNative, TraverseCallback } from './types';
+import { BuildError, DartsError, FileNotFoundError, InvalidDictionaryError } from './errors.js';
+import type { DartsNative, TraverseCallback } from './types.js';
+
+// The compiled output of this file lives at:
+//   <pkg-root>/dist/cjs/core/native.js  (CJS build)
+//   <pkg-root>/dist/esm/core/native.js  (ESM build)
+// `dist/{cjs,esm}/` carries a `package.json` marker that pins the module format.
+// Those markers would short-circuit `bindings()`'s default upward walk for the
+// package root, so we walk up ourselves until we find the real `package.json`
+// (the one carrying the node-pre-gyp `binary` config) and pass it explicitly
+// as `module_root`. Stack inspection lets us discover this file's location
+// without needing `__dirname` (CJS-only) or `import.meta.url` (ESM-only).
+function resolveModuleRoot(): string | null {
+  const stack = new Error().stack ?? '';
+  for (const rawLine of stack.split('\n')) {
+    const line = rawLine.trim();
+    const match =
+      line.match(/\(([^()]+):\d+:\d+\)$/) || line.match(/^at\s+(?:async\s+)?([^()]+):\d+:\d+$/);
+    if (!match) continue;
+    let filePath = match[1];
+    if (filePath.startsWith('file://')) {
+      try {
+        filePath = fileURLToPath(filePath);
+      } catch {
+        continue;
+      }
+    }
+    if (!filePath.includes(`${path.sep}core${path.sep}native.`)) continue;
+    let dir = path.dirname(filePath);
+    while (true) {
+      const pkgPath = path.join(dir, 'package.json');
+      if (fs.existsSync(pkgPath)) {
+        try {
+          const data = JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as {
+            name?: unknown;
+            binary?: { module_name?: unknown };
+          };
+          if (data?.binary?.module_name === 'node_darts' || data?.name === 'node-darts') {
+            return dir;
+          }
+        } catch {
+          // ignore malformed package.json and keep walking up
+        }
+      }
+      const parent = path.dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
+    return null;
+  }
+  return null;
+}
 
 // Load native module
 let native: DartsNative;
 
+const moduleRoot = resolveModuleRoot();
+const bindingsOpts = moduleRoot
+  ? { bindings: 'node_darts', module_root: moduleRoot }
+  : ('node_darts' as const);
+
 try {
   // Try standard bindings approach first
-  native = bindings('node_darts');
+  native = bindings(bindingsOpts);
 } catch (originalError) {
   // Only attempt fallback in Windows CI environment
   const isWindows = process.platform === 'win32';

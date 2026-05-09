@@ -1,7 +1,7 @@
-import Dictionary from './dictionary';
-import { BuildError } from './errors';
-import { dartsNative } from './native';
-import type { BuildOptions } from './types';
+import Dictionary from './dictionary.js';
+import { BuildError } from './errors.js';
+import { dartsNative } from './native.js';
+import type { BuildOptions } from './types.js';
 
 /**
  * Darts Dictionary Builder class

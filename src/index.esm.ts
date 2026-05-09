@@ -8,14 +8,14 @@
  * @packageDocumentation
  */
 
-export { default as Builder } from './core/builder';
+export { default as Builder } from './core/builder.js';
 
-export { default as Dictionary } from './core/dictionary';
-export * from './core/errors';
-export { DartsNativeWrapper, dartsNative } from './core/native';
+export { default as Dictionary } from './core/dictionary.js';
+export * from './core/errors.js';
+export { DartsNativeWrapper, dartsNative } from './core/native.js';
 
-export * from './core/types';
-export * from './core/utils';
+export * from './core/types.js';
+export * from './core/utils.js';
 export {
   buildAndSaveDictionary,
   buildAndSaveDictionarySync,
@@ -23,5 +23,5 @@ export {
   createBuilder,
   createDictionary,
   loadDictionary,
-} from './index';
-export { default as TextDarts } from './text-darts';
+} from './index.js';
+export { default as TextDarts } from './text-darts.js';

@@ -1,6 +1,6 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { FileNotFoundError } from './errors';
+import { FileNotFoundError } from './errors.js';
 
 /**
  * Checks if a file exists

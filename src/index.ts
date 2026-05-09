@@ -7,19 +7,24 @@
  * @packageDocumentation
  */
 
-import Builder from './core/builder';
-import Dictionary from './core/dictionary';
-import type { BuildOptions } from './core/types';
-import TextDarts from './text-darts';
+import Builder from './core/builder.js';
+import Dictionary from './core/dictionary.js';
+import type { BuildOptions } from './core/types.js';
+import TextDarts from './text-darts.js';
 
-export { default as Builder } from './core/builder';
+export { default as Builder } from './core/builder.js';
 // Export classes
-export { default as Dictionary } from './core/dictionary';
+export { default as Dictionary } from './core/dictionary.js';
 // Export error classes
-export { BuildError, DartsError, FileNotFoundError, InvalidDictionaryError } from './core/errors';
+export {
+  BuildError,
+  DartsError,
+  FileNotFoundError,
+  InvalidDictionaryError,
+} from './core/errors.js';
 
 // Export type definitions
-export { BuildOptions, TraverseCallback, TraverseResult, WordReplacer } from './core/types';
+export { BuildOptions, TraverseCallback, TraverseResult, WordReplacer } from './core/types.js';
 // Export utility functions
 export {
   ensureDirectoryExists,
@@ -28,8 +33,8 @@ export {
   sortStrings,
   uniqueArray,
   validateFilePath,
-} from './core/utils';
-export { default as TextDarts } from './text-darts';
+} from './core/utils.js';
+export { default as TextDarts } from './text-darts.js';
 
 /**
  * Creates a dictionary
