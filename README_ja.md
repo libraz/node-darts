@@ -22,6 +22,7 @@ Node.js用 Darts（Double-ARray Trie System）ネイティブアドオン
 - TypeScriptサポート
 - ESModuleとCommonJSのサポート
 - Perlの`Text::Darts`に似たクラスベースのインターフェース
+- 2 つのバックエンド（taku910 の Darts と s-yata の darts-clone）をランタイムで選択可能
 
 ## インストール
 
@@ -329,11 +330,21 @@ const explicit = loadDictionary(file, { backend: 'clone' });
 
 ## ライセンス
 
-MIT
+`node-darts` プロジェクト自体は MIT ライセンスで提供されます（[LICENSE](./LICENSE) を参照）。
+
+本パッケージは以下のサードパーティ C++ ソースを同梱しており、それらは各々のライセンスを保持します:
+
+- **Darts**（Taku Kudo 氏）— BSD ライセンスまたは LGPL のデュアルライセンス。`src/native/third_party/darts/COPYING`, `BSD`, `LGPL` を参照。
+- **darts-clone**（Susumu Yata 氏）— BSD 2-Clause ライセンス。`src/native/third_party/darts-clone/COPYING.md` を参照。
+
+サードパーティの著作権およびライセンスのまとめは [NOTICE](./NOTICE) を参照してください。
 
 ## 謝辞
 
-このプロジェクトは、BSDライセンスとLGPLで配布されているDarts（Double-ARray Trie System）ライブラリを使用しています。
+このプロジェクトは以下 2 つのサードパーティ C++ ライブラリを同梱しています:
+
+- [Darts（Double-ARray Trie System）](http://chasen.org/~taku/software/darts/) — Taku Kudo 氏、BSD ライセンスまたは LGPL で配布。
+- [darts-clone](https://github.com/s-yata/darts-clone) — Susumu Yata 氏、BSD 2-Clause ライセンスで配布。
 
 ## 実装に関する注意点
 

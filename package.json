@@ -18,7 +18,8 @@
     "lib",
     "binding.gyp",
     "src/native",
-    "include"
+    "LICENSE",
+    "NOTICE"
   ],
   "scripts": {
     "build": "yarn clean && tsc -p tsconfig.build.cjs.json && tsc -p tsconfig.build.esm.json && yarn build:addon && node scripts/postbuild-copy.cjs",

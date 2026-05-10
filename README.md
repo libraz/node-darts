@@ -22,6 +22,7 @@ Node.js Native Addon for Darts (Double-ARray Trie System)
 - TypeScript support
 - ESModule and CommonJS support
 - Class-based interface similar to Perl's `Text::Darts`
+- Dual backend (taku910's Darts and s-yata's darts-clone) selectable at runtime
 
 ## Installation
 
@@ -336,11 +337,21 @@ The library provides the following custom error classes:
 
 ## License
 
-MIT
+The `node-darts` project itself is released under the MIT License (see [LICENSE](./LICENSE)).
+
+This package bundles third-party C++ sources that retain their original licenses:
+
+- **Darts** (Taku Kudo) — dual-licensed under the BSD License or LGPL. See `src/native/third_party/darts/COPYING`, `BSD`, and `LGPL`.
+- **darts-clone** (Susumu Yata) — BSD 2-Clause License. See `src/native/third_party/darts-clone/COPYING.md`.
+
+A consolidated summary of third-party copyrights and licenses is available in [NOTICE](./NOTICE).
 
 ## Acknowledgements
 
-This project uses the Darts (Double-ARray Trie System) library, which is distributed under the BSD license and LGPL.
+This project bundles two third-party C++ libraries:
+
+- [Darts (Double-ARray Trie System)](http://chasen.org/~taku/software/darts/) by Taku Kudo, distributed under the BSD License or LGPL.
+- [darts-clone](https://github.com/s-yata/darts-clone) by Susumu Yata, distributed under the BSD 2-Clause License.
 
 ## Implementation Notes
 

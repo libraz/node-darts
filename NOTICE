@@ -1,0 +1,29 @@
+node-darts
+Copyright (c) 2025 node-darts contributors
+
+This product includes software developed by third parties, redistributed
+under their respective licenses. The full text of each license is bundled
+with the distribution at the paths listed below.
+
+------------------------------------------------------------------------
+1. Darts (Double-ARray Trie System)
+------------------------------------------------------------------------
+Copyright (c) Taku Kudo <taku@chasen.org>
+Homepage:    http://chasen.org/~taku/software/darts/
+Source:      src/native/third_party/darts/
+License:     Dual-licensed under the BSD License or the LGPL.
+             See src/native/third_party/darts/COPYING,
+                 src/native/third_party/darts/BSD,
+                 src/native/third_party/darts/LGPL.
+
+The bundled sources have been modified for C++17 compatibility (removal
+of the `register` keyword). No functional changes were made.
+
+------------------------------------------------------------------------
+2. darts-clone
+------------------------------------------------------------------------
+Copyright (c) 2008-2014 Susumu Yata
+Homepage:    https://github.com/s-yata/darts-clone
+Source:      src/native/third_party/darts-clone/
+License:     BSD 2-Clause License.
+             See src/native/third_party/darts-clone/COPYING.md.
