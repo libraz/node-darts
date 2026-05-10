@@ -1,6 +1,6 @@
 import { DartsError } from './errors.js';
 import { dartsNative } from './native.js';
-import type { TraverseCallback, WordReplacer } from './types.js';
+import type { Backend, LoadOptions, TraverseCallback, WordReplacer } from './types.js';
 
 /** Maximum length of a single match attempted by replaceWords. */
 const REPLACE_WORDS_MAX_LEN = 50;
@@ -16,10 +16,16 @@ export default class Dictionary {
 
   /**
    * Constructor
-   * @param handle Dictionary handle (optional)
+   * @param handleOrBackend Either an existing native handle (when wrapping a
+   *   handle returned by buildDictionary), or a backend kind to allocate a
+   *   fresh empty dictionary for. Defaults to allocating a 'darts' backend.
    */
-  constructor(handle?: number) {
-    this.handle = handle === undefined ? dartsNative.createDictionary() : handle;
+  constructor(handleOrBackend?: number | Backend) {
+    if (typeof handleOrBackend === 'number') {
+      this.handle = handleOrBackend;
+    } else {
+      this.handle = dartsNative.createDictionary(handleOrBackend);
+    }
     this.isDisposed = false;
   }
 
@@ -85,14 +91,16 @@ export default class Dictionary {
   /**
    * Loads a dictionary file asynchronously
    * @param filePath path to the dictionary file
+   * @param options optional load options ({ backend?: 'darts' | 'clone' }).
+   *   When omitted, the loader auto-detects.
    * @returns true if successful, false otherwise
    * @throws {FileNotFoundError} if the file is not found
    * @throws {InvalidDictionaryError} if the dictionary file is invalid
    */
-  public async load(filePath: string): Promise<boolean> {
+  public async load(filePath: string, options?: LoadOptions): Promise<boolean> {
     return new Promise((resolve, reject) => {
       try {
-        resolve(this.loadSync(filePath));
+        resolve(this.loadSync(filePath, options));
       } catch (error) {
         reject(error);
       }
@@ -102,13 +110,24 @@ export default class Dictionary {
   /**
    * Loads a dictionary file synchronously
    * @param filePath path to the dictionary file
+   * @param options optional load options ({ backend?: 'darts' | 'clone' }).
+   *   When omitted, the loader auto-detects.
    * @returns true if successful, false otherwise
    * @throws {FileNotFoundError} if the file is not found
    * @throws {InvalidDictionaryError} if the dictionary file is invalid
    */
-  public loadSync(filePath: string): boolean {
+  public loadSync(filePath: string, options?: LoadOptions): boolean {
     this.ensureNotDisposed();
-    return dartsNative.loadDictionary(this.handle, filePath);
+    return dartsNative.loadDictionary(this.handle, filePath, options?.backend);
+  }
+
+  /**
+   * Returns the backend kind currently held by this dictionary
+   * ('darts' for taku910/darts, 'clone' for s-yata/darts-clone).
+   */
+  public getBackend(): Backend {
+    this.ensureNotDisposed();
+    return dartsNative.getBackend(this.handle);
   }
 
   /**

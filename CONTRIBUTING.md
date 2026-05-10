@@ -7,11 +7,13 @@ Thank you for your interest in contributing to node-darts! This document provide
 ### Prerequisites
 
 - Node.js v20.0.0 or later
-- Yarn v3.6.4 or later
+- Yarn v4.0.0 or later (the repo pins `yarn@4.9.1` via Volta / `packageManager`)
 - C++ compiler with C++17 support
   - Windows: Visual Studio 2019 or later with C++ build tools
   - macOS: Xcode Command Line Tools
   - Linux: GCC 7 or later, build-essential
+
+Both Darts backends (`darts` and `darts-clone`) are vendored under `src/native/third_party/` and compiled into a single native addon, so no submodule init is required.
 
 ### Setting Up
 
@@ -69,16 +71,36 @@ To run tests with coverage:
 yarn test:coverage
 ```
 
+Tests are organised into tiers under `tests/`:
+
+- `tests/unit/` — fast unit tests for the core TypeScript layer
+- `tests/integration/` — exercises the native addon end-to-end
+- `tests/perf/` — performance smoke + heavy benchmarks
+- `tests/regression/` — pinned regression cases
+
+Vitest runs with `pool: 'forks'` and `fileParallelism: false` so the process-global native handle table is isolated between files. See `vitest.config.ts`.
+
+#### Running tests against the `darts-clone` backend
+
+The `NODE_DARTS_DEFAULT_BACKEND` env var overrides the default backend used when callers don't pass one explicitly. CI runs the suite twice (once per backend); to do the same locally:
+
+```bash
+yarn test                                  # taku910/darts default
+NODE_DARTS_DEFAULT_BACKEND=clone yarn test # darts-clone default
+```
+
+`tests/regression/backend-switch.test.ts` always exercises both backends explicitly via `describe.each`.
+
 #### Performance Tests
 
-Performance tests are skipped by default because they take a long time to run. To run performance tests manually:
+`tests/perf/perf-smoke.test.ts` runs by default and only catches order-of-magnitude regressions. The heavy suite at `tests/perf/performance.test.ts` is `describe.skip`-ed because it generates 10k–100k keys and is too slow for CI. To run it manually:
 
-1. Open `tests/performance.test.ts`
+1. Open `tests/perf/performance.test.ts`
 2. Change `describe.skip('Performance Tests', () => {` to `describe('Performance Tests', () => {`
 3. Run the performance tests:
 
 ```bash
-yarn test tests/performance.test.ts
+yarn test tests/perf/performance.test.ts
 ```
 
 4. Remember to change it back to `describe.skip` before committing your changes.
@@ -101,18 +123,17 @@ Performance tests are useful for:
 - Optimizing critical code paths
 - Testing the replaceWords functionality with large datasets
 
-### Linting
+### Linting & Formatting
 
-To lint the code:
-
-```bash
-yarn lint
-```
-
-To automatically fix linting issues:
+This project uses [Biome](https://biomejs.dev/) for linting and formatting (ESLint + Prettier are no longer used). Configuration lives in `biome.json`.
 
 ```bash
-yarn format
+yarn lint        # biome lint
+yarn lint:fix    # biome lint --write
+yarn format      # biome format --write
+yarn check       # biome check (lint + format together)
+yarn check:fix   # biome check --write
+yarn ci          # biome ci (used in CI; fails on any issue)
 ```
 
 ## Pull Request Process
@@ -136,7 +157,7 @@ yarn format
 
 ### TypeScript
 
-- Follow the Airbnb TypeScript style guide.
+- Follow the project's Biome configuration (`biome.json`); run `yarn check:fix` before committing.
 - Use meaningful variable and function names.
 - Add JSDoc comments for public APIs.
 - Maintain type safety throughout the codebase.
@@ -155,19 +176,24 @@ yarn format
 ```
 node-darts/
 ├── scripts/                      # Build scripts
-│   └── postbuild-copy.cjs        # Script to copy files after build
+│   ├── postbuild-copy.cjs        # Copies non-TS assets into dist/ after build
+│   └── install-build-tools.js    # Best-effort native toolchain bootstrap (Windows)
 ├── src/                          # Source code
 │   ├── native/                   # C++ native code
-│   │   ├── bindings.cpp          # Node-API bindings entry point
-│   │   ├── dictionary.cpp        # Dictionary native implementation
+│   │   ├── bindings.cpp          # Node-API bindings entry point + handle table
+│   │   ├── bindings.d.ts         # TypeScript types for the `bindings` package
+│   │   ├── dictionary.cpp        # Dictionary native dispatch (BackendDict)
 │   │   ├── dictionary.h          # Dictionary header
-│   │   ├── builder.cpp           # Builder native implementation
+│   │   ├── builder.cpp           # Builder native dispatch (BackendDict)
 │   │   ├── builder.h             # Builder header
-│   │   ├── common.h              # Common definitions
+│   │   ├── backend.h             # BackendDict virtual interface + factory
+│   │   ├── backend_factory.cpp   # MakeBackend() dispatcher
+│   │   ├── backend_darts.cpp     # taku910/darts implementation of BackendDict
+│   │   ├── backend_clone.cpp     # darts-clone implementation (namespace-rename trick)
+│   │   ├── common.h              # Shared declarations (handle table, backend parser)
 │   │   └── third_party/
-│   │       └── darts/
-│   │           ├── darts.h       # Modified darts.h (C++17 compatible)
-│   │           └── darts.cpp     # Original darts.cpp
+│   │       ├── darts/            # taku910/darts (C++17-patched)
+│   │       └── darts-clone/      # s-yata/darts-clone (vendored, header-only)
 │   ├── core/                     # TypeScript core implementation
 │   │   ├── types.ts              # Type definitions
 │   │   ├── errors.ts             # Error definitions
@@ -175,37 +201,29 @@ node-darts/
 │   │   ├── builder.ts            # Builder class
 │   │   ├── dictionary.ts         # Dictionary class
 │   │   └── utils.ts              # Utility functions
-│   ├── text-darts.ts             # TextDarts class implementation (uses Factory Method pattern)
+│   ├── text-darts.ts             # TextDarts class (Factory Method pattern)
 │   ├── index.ts                  # Package entry point (CommonJS)
 │   └── index.esm.ts              # ESM wrapper for the native module
-├── tests/                        # Test directory
-│   ├── dictionary.test.ts        # Dictionary tests
-│   ├── builder.test.ts           # Builder tests
-│   ├── text-darts.test.ts        # TextDarts tests
-│   ├── replaceWords.test.ts      # Text replacement functionality tests
-│   ├── advanced.test.ts          # Advanced feature tests
-│   ├── performance.test.ts       # Performance tests
-│   ├── integration.test.ts       # Integration tests
-│   ├── esm-support.test.ts       # ESM support tests
-│   ├── index.esm.test.ts         # ESM wrapper tests
-│   ├── index.esm.error.test.ts   # ESM error handling tests
-│   └── index.esm.exports.test.ts # ESM exports tests
-└── examples/                     # Example code
-    ├── basic-usage.js            # Basic usage example
-    ├── dictionary-builder.js     # Dictionary builder example
-    ├── text-replacement.js       # Text replacement example
-    ├── text-replacement.ts       # TypeScript text replacement example
-    ├── auto-complete.js          # Auto-complete example
-    ├── error-handling.js         # Error handling example
-    ├── morphological-analysis.js # Morphological analysis example
-    └── ja/                       # Japanese examples
-        ├── README.md             # Japanese examples README
-        ├── auto-complete.js      # Japanese auto-complete example
-        ├── error-handling.js     # Japanese error handling example
-        └── morphological-analysis.js # Japanese morphological analysis example
-├── tsconfig.json                # TypeScript configuration
-├── tsconfig.build.cjs.json      # TypeScript configuration for CommonJS build
-└── tsconfig.build.esm.json      # TypeScript configuration for ESM build
+├── tests/                        # Vitest test suite (tiered)
+│   ├── unit/                     # Fast unit tests for the TS core
+│   ├── integration/              # End-to-end native addon tests
+│   ├── perf/                     # perf-smoke (always on) + performance (skipped)
+│   └── regression/               # Pinned regression cases
+├── examples/                     # Example code
+│   ├── basic-usage.js
+│   ├── dictionary-builder.js
+│   ├── text-replacement.js
+│   ├── text-replacement.ts
+│   ├── auto-complete.js
+│   ├── error-handling.js
+│   ├── morphological-analysis.js
+│   └── ja/                       # Japanese-localised examples
+├── biome.json                    # Biome lint/format config
+├── vitest.config.ts              # Vitest config (pool='forks', fileParallelism=false)
+├── binding.gyp                   # node-gyp build (compiles both backends)
+├── tsconfig.json                 # TypeScript base config
+├── tsconfig.build.cjs.json       # CommonJS build config
+└── tsconfig.build.esm.json       # ESM build config
 ```
 
 ## License

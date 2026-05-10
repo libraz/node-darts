@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import bindings from 'bindings';
 import { BuildError, DartsError, FileNotFoundError, InvalidDictionaryError } from './errors.js';
-import type { DartsNative, TraverseCallback } from './types.js';
+import type { Backend, DartsNative, TraverseCallback } from './types.js';
 
 // The compiled output of this file lives at:
 //   <pkg-root>/dist/cjs/core/native.js  (CJS build)
@@ -54,6 +54,15 @@ function resolveModuleRoot(): string | null {
   }
   return null;
 }
+
+// Resolve the default backend used when callers don't pass one explicitly.
+// Set NODE_DARTS_DEFAULT_BACKEND=clone in CI to exercise the same test suite
+// against the darts-clone backend without rewriting individual tests.
+function resolveDefaultBackend(): Backend {
+  const v = process.env.NODE_DARTS_DEFAULT_BACKEND;
+  return v === 'clone' ? 'clone' : 'darts';
+}
+const defaultBackend: Backend = resolveDefaultBackend();
 
 // Load native module
 let native: DartsNative;
@@ -166,12 +175,13 @@ try {
 export class DartsNativeWrapper implements DartsNative {
   /**
    * Creates a dictionary object
+   * @param backend backend kind to allocate (defaults to 'darts')
    * @returns dictionary handle
    */
   // eslint-disable-next-line class-methods-use-this
-  createDictionary(): number {
+  createDictionary(backend?: Backend): number {
     try {
-      const handle = native.createDictionary();
+      const handle = native.createDictionary(backend ?? defaultBackend);
       if (handle === null || handle === undefined) {
         throw new DartsError('Failed to create dictionary');
       }
@@ -205,17 +215,19 @@ export class DartsNativeWrapper implements DartsNative {
    * Loads a dictionary file
    * @param handle dictionary handle
    * @param filePath path to the dictionary file
+   * @param backend if provided, only that backend is used; otherwise the
+   *   loader auto-detects (darts-clone first, falling back to taku910)
    * @returns true if successful, false otherwise
    */
   // eslint-disable-next-line class-methods-use-this
-  loadDictionary(handle: number, filePath: string): boolean {
+  loadDictionary(handle: number, filePath: string, backend?: Backend): boolean {
     // Check if the file exists
     if (!fs.existsSync(filePath)) {
       throw new FileNotFoundError(filePath);
     }
 
     try {
-      const result = native.loadDictionary(handle, filePath);
+      const result = native.loadDictionary(handle, filePath, backend);
       if (result === false) {
         throw new InvalidDictionaryError(`Failed to load dictionary from ${filePath}`);
       }
@@ -312,10 +324,11 @@ export class DartsNativeWrapper implements DartsNative {
    * Builds a Double-Array
    * @param keys array of keys
    * @param values array of values (indices are used if omitted)
+   * @param backend backend kind to build with (defaults to 'darts')
    * @returns dictionary handle
    */
   // eslint-disable-next-line class-methods-use-this
-  build(keys: string[], values?: number[]): number {
+  build(keys: string[], values?: number[], backend?: Backend): number {
     try {
       if (!Array.isArray(keys) || keys.length === 0) {
         throw new BuildError('Empty keys array');
@@ -341,7 +354,7 @@ export class DartsNativeWrapper implements DartsNative {
         });
       }
 
-      const handle = native.build(keys, values);
+      const handle = native.build(keys, values, backend ?? defaultBackend);
       if (handle === null || handle === undefined) {
         throw new BuildError('Failed to build dictionary');
       }
@@ -366,6 +379,20 @@ export class DartsNativeWrapper implements DartsNative {
     } catch (error) {
       throw new DartsError(
         `Failed to get dictionary size: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  }
+
+  /**
+   * Returns the backend kind currently held by the handle.
+   */
+  // eslint-disable-next-line class-methods-use-this
+  getBackend(handle: number): Backend {
+    try {
+      return native.getBackend(handle);
+    } catch (error) {
+      throw new DartsError(
+        `Failed to get dictionary backend: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }

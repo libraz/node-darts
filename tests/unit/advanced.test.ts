@@ -1,7 +1,11 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { Builder } from '../../src';
+import { BuildError, Builder } from '../../src';
+
+// darts-clone rejects zero-length keys at build time; taku910/darts accepts
+// them. Read the configured default backend so the assertion matches.
+const defaultBackend = process.env.NODE_DARTS_DEFAULT_BACKEND === 'clone' ? 'clone' : 'darts';
 
 describe('Advanced Tests', () => {
   let tempDir: string;
@@ -37,13 +41,18 @@ describe('Advanced Tests', () => {
   });
 
   describe('Edge cases', () => {
-    it('should handle empty strings', () => {
+    it('handles empty strings (taku910/darts) or rejects them (darts-clone)', () => {
       const builder = new Builder();
       const keys = ['', 'a', 'ab', 'abc'];
       const values = [100, 200, 300, 400];
 
-      const dict = builder.build(keys, values);
+      if (defaultBackend === 'clone') {
+        // darts-clone rejects zero-length keys at build time.
+        expect(() => builder.build(keys, values)).toThrow(BuildError);
+        return;
+      }
 
+      const dict = builder.build(keys, values);
       expect(dict.exactMatchSearch('')).toBe(100);
       expect(dict.exactMatchSearch('a')).toBe(200);
 

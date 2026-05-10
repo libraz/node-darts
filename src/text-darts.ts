@@ -10,7 +10,13 @@ import Builder from './core/builder.js';
 import Dictionary from './core/dictionary.js';
 import { FileNotFoundError } from './core/errors.js';
 import { dartsNative } from './core/native.js';
-import type { BuildOptions, TraverseCallback, WordReplacer } from './core/types.js';
+import type {
+  Backend,
+  BuildOptions,
+  LoadOptions,
+  TraverseCallback,
+  WordReplacer,
+} from './core/types.js';
 
 // FinalizationRegistry for automatic resource cleanup
 const registry = new FinalizationRegistry((handle: number) => {
@@ -58,6 +64,14 @@ export default class TextDarts {
   }
 
   /**
+   * Returns the backend kind currently held by the underlying dictionary.
+   */
+  public getBackend(): Backend {
+    this.ensureNotDisposed();
+    return this.dictionary.getBackend();
+  }
+
+  /**
    * Creates a new TextDarts object from a word list
    * @param keys Array of words
    * @param values Optional array of values
@@ -73,16 +87,17 @@ export default class TextDarts {
   /**
    * Creates a new TextDarts object from a dictionary file
    * @param filePath Path to the dictionary file
+   * @param options optional load options ({ backend?: 'darts' | 'clone' })
    * @returns A new TextDarts object
    */
-  public static load(filePath: string): TextDarts {
+  public static load(filePath: string, options?: LoadOptions): TextDarts {
     // Check if file exists
     if (!fs.existsSync(filePath)) {
       throw new FileNotFoundError(filePath);
     }
 
     const dictionary = new Dictionary();
-    dictionary.loadSync(filePath);
+    dictionary.loadSync(filePath, options);
     // Note: We don't have the original words in this case
     // This will limit the functionality of replaceWords
     return new TextDarts(dictionary, []);
@@ -168,26 +183,24 @@ export default class TextDarts {
   /**
    * Loads a dictionary file asynchronously
    * @param filePath Path to the dictionary file
+   * @param options optional load options ({ backend?: 'darts' | 'clone' })
    * @returns Promise that resolves to true if successful
    */
-  public async load(filePath: string): Promise<boolean> {
+  public async load(filePath: string, options?: LoadOptions): Promise<boolean> {
     this.ensureNotDisposed();
-    const result = await this.dictionary.load(filePath);
-    // Note: We don't have the original words in this case
-    // This will limit the functionality of replaceWords
+    const result = await this.dictionary.load(filePath, options);
     return result;
   }
 
   /**
    * Loads a dictionary file synchronously
    * @param filePath Path to the dictionary file
+   * @param options optional load options ({ backend?: 'darts' | 'clone' })
    * @returns True if successful
    */
-  public loadSync(filePath: string): boolean {
+  public loadSync(filePath: string, options?: LoadOptions): boolean {
     this.ensureNotDisposed();
-    const result = this.dictionary.loadSync(filePath);
-    // Note: We don't have the original words in this case
-    // This will limit the functionality of replaceWords
+    const result = this.dictionary.loadSync(filePath, options);
     return result;
   }
 

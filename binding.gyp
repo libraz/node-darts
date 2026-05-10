@@ -1,21 +1,24 @@
 {
   "variables": {
     "module_name": "node_darts",
-    "module_path": "lib/binding/{node_abi}-{platform}-{arch}",
-    # Pick the Darts backend at build time. Override with:
-    #   DARTS_BACKEND=clone yarn build:addon
-    # Default is the original taku910/darts. The s-yata/darts-clone backend
-    # is header-only, so its source list omits darts.cpp.
-    "darts_backend%": "<!(node -p \"process.env.DARTS_BACKEND || 'darts'\")"
+    "module_path": "lib/binding/{node_abi}-{platform}-{arch}"
   },
   "targets": [
     {
       "target_name": "<(module_name)",
       "product_dir": "<(module_path)",
+      # Both Darts backends are compiled and linked into a single .node so
+      # callers can pick between them at runtime via the `backend` option.
+      # backend_clone.cpp uses `#define Darts DartsClone` to side-step the
+      # ODR collision on Darts::DoubleArray (see backend_clone.cpp comment).
       "sources": [
         "src/native/bindings.cpp",
         "src/native/dictionary.cpp",
-        "src/native/builder.cpp"
+        "src/native/builder.cpp",
+        "src/native/backend_factory.cpp",
+        "src/native/backend_darts.cpp",
+        "src/native/backend_clone.cpp",
+        "src/native/third_party/darts/darts.cpp"
       ],
       "include_dirs": [
         "<!@(node -p \"require('node-addon-api').include\")",
@@ -44,15 +47,6 @@
         ]
       },
       "conditions": [
-        [
-          "darts_backend=='clone'",
-          {
-            "defines": [ "USE_DARTS_CLONE" ]
-          },
-          {
-            "sources": [ "src/native/third_party/darts/darts.cpp" ]
-          }
-        ],
         [
           "OS=='win'",
           {

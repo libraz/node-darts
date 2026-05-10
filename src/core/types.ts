@@ -1,4 +1,10 @@
 /**
+ * Backend kind: 'darts' selects the original taku910/darts library, 'clone'
+ * selects s-yata/darts-clone. Both are linked into the native addon.
+ */
+export type Backend = 'darts' | 'clone';
+
+/**
  * Interface representing the result of traversing a Trie
  */
 export interface TraverseResult {
@@ -28,6 +34,20 @@ export type WordReplacer = ((match: string) => string) | Record<string, string>;
 export interface BuildOptions {
   /** progress callback function */
   progressCallback?: (current: number, total: number) => void;
+  /** backend to build with (defaults to 'darts' / taku910 for back-compat) */
+  backend?: Backend;
+}
+
+/**
+ * Interface for dictionary load options
+ */
+export interface LoadOptions {
+  /**
+   * Backend to load with. If omitted, the loader auto-detects by trying
+   * darts-clone first (it validates strictly) and falling back to taku910/darts
+   * on rejection.
+   */
+  backend?: Backend;
 }
 
 /**
@@ -36,11 +56,11 @@ export interface BuildOptions {
  */
 export interface DartsNative {
   /** Creates a dictionary object */
-  createDictionary(): number;
+  createDictionary(backend?: Backend): number;
   /** Destroys a dictionary object */
   destroyDictionary(handle: number): void;
   /** Loads a dictionary file */
-  loadDictionary(handle: number, filePath: string): boolean;
+  loadDictionary(handle: number, filePath: string, backend?: Backend): boolean;
   /** Saves a dictionary file */
   saveDictionary(handle: number, filePath: string): boolean;
   /** Performs an exact match search */
@@ -50,7 +70,9 @@ export interface DartsNative {
   /** Traverses the trie */
   traverse(handle: number, key: string, callback: TraverseCallback): void;
   /** Builds a Double-Array */
-  build(keys: string[], values?: number[]): number;
+  build(keys: string[], values?: number[], backend?: Backend): number;
   /** Gets the size of the dictionary */
   size(handle: number): number;
+  /** Returns the backend kind currently held by the handle */
+  getBackend(handle: number): Backend;
 }

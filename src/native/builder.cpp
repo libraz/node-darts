@@ -1,20 +1,25 @@
 #include "builder.h"
-#include <vector>
-#include <string>
+
 #include <algorithm>
 #include <stdexcept>
+#include <string>
+#include <vector>
+
+#include "backend.h"
+#include "common.h"
 
 namespace node_darts {
 
 Napi::Value Build(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
-  
+
   try {
     if (info.Length() < 1 || !info[0].IsArray()) {
-      Napi::TypeError::New(env, "First argument must be an array of keys").ThrowAsJavaScriptException();
+      Napi::TypeError::New(env, "First argument must be an array of keys")
+          .ThrowAsJavaScriptException();
       return env.Null();
     }
-    
+
     Napi::Array keys_array = info[0].As<Napi::Array>();
     const uint32_t input_len = keys_array.Length();
 
@@ -30,7 +35,15 @@ Napi::Value Build(const Napi::CallbackInfo& info) {
     if (has_values) {
       values_array = info[1].As<Napi::Array>();
       if (values_array.Length() != input_len) {
-        Napi::Error::New(env, "Values array length must match keys array length").ThrowAsJavaScriptException();
+        Napi::Error::New(env, "Values array length must match keys array length")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+      }
+    }
+
+    BackendKind backend_kind = BackendKind::Darts;
+    if (info.Length() >= 3) {
+      if (!ParseBackendArg(env, info[2], backend_kind, BackendKind::Darts)) {
         return env.Null();
       }
     }
@@ -66,7 +79,6 @@ Napi::Value Build(const Napi::CallbackInfo& info) {
                        return a.first < b.first;
                      });
 
-    // Dedup by key (drop later duplicates, keep first value for that key).
     auto last = std::unique(pairs.begin(), pairs.end(),
                             [](const std::pair<std::string, int>& a,
                                const std::pair<std::string, int>& b) {
@@ -74,7 +86,7 @@ Napi::Value Build(const Napi::CallbackInfo& info) {
                             });
     pairs.erase(last, pairs.end());
 
-    const uint32_t num_keys = static_cast<uint32_t>(pairs.size());
+    const std::size_t num_keys = pairs.size();
 
     std::vector<std::string> keys;
     std::vector<const char*> key_ptrs;
@@ -91,18 +103,19 @@ Napi::Value Build(const Napi::CallbackInfo& info) {
       key_ptrs.push_back(key.c_str());
     }
 
-    // Build the Double-Array
-    DartsDict* dict = new DartsDict();
-    int result = dict->build(num_keys, key_ptrs.data(), nullptr, values.data());
+    auto dict = MakeBackend(backend_kind);
+    if (!dict) {
+      Napi::Error::New(env, "Failed to allocate backend").ThrowAsJavaScriptException();
+      return env.Null();
+    }
 
+    int result = dict->Build(num_keys, key_ptrs.data(), nullptr, values.data());
     if (result != 0) {
-      delete dict;
       Napi::Error::New(env, "Failed to build dictionary").ThrowAsJavaScriptException();
       return env.Null();
     }
 
-    // Return the handle
-    uint32_t handle = AddDictionary(dict);
+    uint32_t handle = AddDictionary(dict.release());
     return Napi::Number::New(env, handle);
   } catch (const std::exception& e) {
     Napi::Error::New(env, e.what()).ThrowAsJavaScriptException();

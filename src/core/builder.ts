@@ -48,7 +48,7 @@ export default class Builder {
     options?.progressCallback?.(0, total);
 
     try {
-      const handle = dartsNative.build(keys, values);
+      const handle = dartsNative.build(keys, values, options?.backend);
       options?.progressCallback?.(total, total);
       return new Dictionary(handle);
     } catch (error) {

@@ -289,37 +289,41 @@ darts.dispose();
 
 ## Backends (Darts vs darts-clone)
 
-Two compatible backends are vendored under `src/native/third_party`:
+Both Darts implementations are compiled into the single native addon, so callers
+can pick between them at runtime via a `backend` option:
 
-- `darts` (default) — taku910's original Darts library (the package's existing
-  behaviour).
-- `darts-clone` — s-yata's faster, more compact reimplementation, vendored as a
-  Git submodule. Run `git submodule update --init --recursive` after cloning to
-  populate it.
+- `'darts'` (default) — taku910's original Darts library
+- `'clone'` — s-yata's faster, more compact `darts-clone` reimplementation
 
-Switch backends at native-build time with the `DARTS_BACKEND` environment
-variable:
+```javascript
+// Build with explicit backend
+const dict = buildDictionary(keys, values, { backend: 'clone' });
 
-```bash
-# Default (taku910/darts)
-yarn build:addon
+// Save and reload — auto-detect picks the right backend
+const file = '/tmp/dict.darts';
+buildAndSaveDictionarySync(keys, file, values, { backend: 'clone' });
+const reloaded = loadDictionary(file);
+console.log(reloaded.getBackend()); // 'clone'
 
-# darts-clone
-DARTS_BACKEND=clone yarn build:addon
+// Force a specific backend on load (skips auto-detect)
+const explicit = loadDictionary(file, { backend: 'clone' });
 ```
 
-The public JavaScript / TypeScript API is identical for both backends, but a few
-behaviours differ:
+When `loadDictionary(path)` is called without an explicit `backend`, the loader
+probes `darts-clone` first (it validates the on-disk format strictly) and falls
+back to taku910 on rejection. Pass `{ backend }` explicitly to skip detection.
+
+The public API is identical for both, but a few behaviours differ:
 
 - **On-disk format is NOT compatible.** A `.darts` file built with one backend
   cannot be loaded by the other.
-- darts-clone rejects zero-length keys at build time; the original silently
+- `darts-clone` rejects zero-length keys at build time; the original silently
   accepts them.
-- darts-clone rejects malformed dictionary files at load time; the original may
-  accept them and crash later.
+- `darts-clone` rejects malformed dictionary files at load time; the original
+  may accept them and crash later — auto-detect prefers clone for that reason.
 
-Tests target the default backend; switching is done at the C++ build layer only
-and requires no JavaScript-side changes.
+Use `dict.getBackend()` (or `TextDarts#getBackend()`) to introspect which
+backend a dictionary is currently using.
 
 ## Error Handling
 

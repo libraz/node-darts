@@ -9,7 +9,7 @@
 
 import Builder from './core/builder.js';
 import Dictionary from './core/dictionary.js';
-import type { BuildOptions } from './core/types.js';
+import type { Backend, BuildOptions, LoadOptions } from './core/types.js';
 import TextDarts from './text-darts.js';
 
 export { default as Builder } from './core/builder.js';
@@ -24,7 +24,14 @@ export {
 } from './core/errors.js';
 
 // Export type definitions
-export { BuildOptions, TraverseCallback, TraverseResult, WordReplacer } from './core/types.js';
+export {
+  Backend,
+  BuildOptions,
+  LoadOptions,
+  TraverseCallback,
+  TraverseResult,
+  WordReplacer,
+} from './core/types.js';
 // Export utility functions
 export {
   ensureDirectoryExists,
@@ -38,6 +45,7 @@ export { default as TextDarts } from './text-darts.js';
 
 /**
  * Creates a dictionary
+ * @param backend optional backend kind ('darts' or 'clone'); defaults to 'darts'
  * @returns a new Dictionary object
  * @example
  * ```typescript
@@ -48,8 +56,8 @@ export { default as TextDarts } from './text-darts.js';
  * const result = dict.exactMatchSearch('hello');
  * ```
  */
-export function createDictionary(): Dictionary {
-  return new Dictionary();
+export function createDictionary(backend?: Backend): Dictionary {
+  return new Dictionary(backend);
 }
 
 /**
@@ -71,6 +79,8 @@ export function createBuilder(): Builder {
 /**
  * Loads a dictionary file
  * @param filePath path to the dictionary file
+ * @param options optional load options ({ backend?: 'darts' | 'clone' });
+ *   when omitted, the loader auto-detects (clone first, then darts)
  * @returns the loaded Dictionary object
  * @throws {FileNotFoundError} if the file is not found
  * @throws {InvalidDictionaryError} if the dictionary file is invalid
@@ -82,9 +92,9 @@ export function createBuilder(): Builder {
  * const result = dict.exactMatchSearch('hello');
  * ```
  */
-export function loadDictionary(filePath: string): Dictionary {
+export function loadDictionary(filePath: string, options?: LoadOptions): Dictionary {
   const dict = new Dictionary();
-  dict.loadSync(filePath);
+  dict.loadSync(filePath, options);
   return dict;
 }
 

@@ -1,3 +1,0 @@
-[submodule "src/native/third_party/darts-clone"]
-	path = src/native/third_party/darts-clone
-	url = https://github.com/s-yata/darts-clone

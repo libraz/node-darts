@@ -287,6 +287,37 @@ console.log(highlighted);
 darts.dispose();
 ```
 
+## バックエンド (Darts vs darts-clone)
+
+両方の Darts 実装が一つのネイティブアドオンに同居しており、`backend` オプションでランタイムに選択できます:
+
+- `'darts'` (デフォルト) — taku910 によるオリジナルの Darts ライブラリ
+- `'clone'` — s-yata による、より高速でコンパクトな `darts-clone` 再実装
+
+```javascript
+// 明示的にバックエンドを指定して構築
+const dict = buildDictionary(keys, values, { backend: 'clone' });
+
+// 保存と再読み込み — 自動判別が正しいバックエンドを選ぶ
+const file = '/tmp/dict.darts';
+buildAndSaveDictionarySync(keys, file, values, { backend: 'clone' });
+const reloaded = loadDictionary(file);
+console.log(reloaded.getBackend()); // 'clone'
+
+// 自動判別を行わず、特定のバックエンドを強制
+const explicit = loadDictionary(file, { backend: 'clone' });
+```
+
+`loadDictionary(path)` を `backend` なしで呼ぶと、ローダはまず `darts-clone` で読み込みを試み（こちらはディスク上のフォーマットを厳密に検証する）、拒否された場合は taku910 にフォールバックします。判別をスキップしたい場合は `{ backend }` を明示してください。
+
+公開している API は両バックエンドで同一ですが、いくつかの挙動が異なります:
+
+- **ディスク上のフォーマットに互換性はありません。** 一方のバックエンドで構築した `.darts` ファイルはもう一方では読み込めません。
+- `darts-clone` は構築時に長さ0のキーを拒否しますが、オリジナルは黙って受け入れます。
+- `darts-clone` は読み込み時に不正な辞書ファイルを拒否しますが、オリジナルは受け入れた後にクラッシュする可能性があります — 自動判別が clone を優先するのはこのためです。
+
+`dict.getBackend()` (または `TextDarts#getBackend()`) で、辞書が現在どちらのバックエンドを使っているかを確認できます。
+
 ## エラーハンドリング
 
 このライブラリは以下のカスタムエラークラスを提供します：
