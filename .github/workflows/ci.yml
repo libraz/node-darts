@@ -41,7 +41,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        backend: [darts, clone]
     steps:
       - uses: actions/checkout@v4
       - run: corepack enable
@@ -53,13 +52,20 @@ jobs:
       - run: yarn install --immutable
       - run: yarn build --verbose
 
-      - name: Run tests with coverage
+      - name: Run tests against darts-clone backend
         run: yarn test:coverage
         env:
-          NODE_DARTS_DEFAULT_BACKEND: ${{ matrix.backend }}
+          NODE_DARTS_DEFAULT_BACKEND: clone
+
+      # Run the darts backend last so the coverage report uploaded to Codecov
+      # reflects it (overwrites the previous run's coverage/ output).
+      - name: Run tests against darts backend
+        run: yarn test:coverage
+        env:
+          NODE_DARTS_DEFAULT_BACKEND: darts
 
       - name: Upload coverage to Codecov
-        if: matrix.os == 'ubuntu-latest' && matrix.backend == 'darts'
+        if: matrix.os == 'ubuntu-latest'
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
