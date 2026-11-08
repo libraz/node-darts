@@ -49,3 +49,10 @@ Thumbs.db
 .claude/
 CLAUDE.md
 agent.md
+
+# Rust build output
+/target/
+
+# Upstream images recorded as test oracles
+!core/tests/fixtures/**/*.darts
+src/generated/
