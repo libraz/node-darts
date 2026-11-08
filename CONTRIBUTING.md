@@ -7,7 +7,7 @@ Thank you for your interest in contributing to node-darts! This document provide
 ### Prerequisites
 
 - Node.js v20.0.0 or later
-- Yarn v4.0.0 or later (the repo pins `yarn@4.9.1` via Volta / `packageManager`)
+- Yarn v4.0.0 or later (the repo pins `yarn@4.18.0` via `mise.toml` / `packageManager`)
 - C++ compiler with C++17 support
   - Windows: Visual Studio 2019 or later with C++ build tools
   - macOS: Xcode Command Line Tools
@@ -17,7 +17,7 @@ Both Darts backends (`darts` and `darts-clone`) are vendored under `src/native/t
 
 ### Setting Up
 
-This project uses [Volta](https://volta.sh/) to manage Node.js and Yarn versions. If you have Volta installed, it will automatically use the correct versions specified in `package.json`.
+This project uses [mise](https://mise.jdx.dev/) to manage Node.js and Yarn versions. With mise installed, run `mise install` in the repository root to get the versions pinned in `mise.toml`.
 
 1. Clone the repository:
 
@@ -78,7 +78,7 @@ Tests are organised into tiers under `tests/`:
 - `tests/perf/` — performance smoke + heavy benchmarks
 - `tests/regression/` — pinned regression cases
 
-Vitest runs with `pool: 'forks'` and `fileParallelism: false` so the process-global native handle table is isolated between files. See `vitest.config.ts`.
+Vitest runs with `pool: 'forks'` and `fileParallelism: false` so the process-global native handle table is isolated between files. See `vitest.config.mts`.
 
 #### Running tests against the `darts-clone` backend
 
@@ -219,7 +219,7 @@ node-darts/
 │   ├── morphological-analysis.js
 │   └── ja/                       # Japanese-localised examples
 ├── biome.json                    # Biome lint/format config
-├── vitest.config.ts              # Vitest config (pool='forks', fileParallelism=false)
+├── vitest.config.mts              # Vitest config (pool='forks', fileParallelism=false)
 ├── binding.gyp                   # node-gyp build (compiles both backends)
 ├── tsconfig.json                 # TypeScript base config
 ├── tsconfig.build.cjs.json       # CommonJS build config
