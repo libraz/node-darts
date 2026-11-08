@@ -94,7 +94,12 @@ export function createBuilder(): Builder {
  */
 export function loadDictionary(filePath: string, options?: LoadOptions): Dictionary {
   const dict = new Dictionary();
-  dict.loadSync(filePath, options);
+  try {
+    dict.loadSync(filePath, options);
+  } catch (error) {
+    dict.dispose();
+    throw error;
+  }
   return dict;
 }
 

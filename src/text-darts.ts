@@ -8,7 +8,7 @@
 import * as fs from 'node:fs';
 import Builder from './core/builder.js';
 import Dictionary from './core/dictionary.js';
-import { FileNotFoundError } from './core/errors.js';
+import { DartsError, FileNotFoundError } from './core/errors.js';
 import { dartsNative } from './core/native.js';
 import type {
   Backend,
@@ -32,6 +32,7 @@ const registry = new FinalizationRegistry((handle: number) => {
 export default class TextDarts {
   private dictionary: Dictionary;
 
+  /** Distinct built words; empty once the dictionary came from a file. */
   private words: string[];
 
   private isDisposed: boolean;
@@ -81,7 +82,7 @@ export default class TextDarts {
   public static build(keys: string[], values?: number[], options?: BuildOptions): TextDarts {
     const builder = new Builder();
     const dictionary = builder.build(keys, values, options);
-    return new TextDarts(dictionary, keys);
+    return new TextDarts(dictionary, [...new Set(keys)]);
   }
 
   /**
@@ -97,7 +98,12 @@ export default class TextDarts {
     }
 
     const dictionary = new Dictionary();
-    dictionary.loadSync(filePath, options);
+    try {
+      dictionary.loadSync(filePath, options);
+    } catch (error) {
+      dictionary.dispose();
+      throw error;
+    }
     // Note: We don't have the original words in this case
     // This will limit the functionality of replaceWords
     return new TextDarts(dictionary, []);
@@ -189,6 +195,7 @@ export default class TextDarts {
   public async load(filePath: string, options?: LoadOptions): Promise<boolean> {
     this.ensureNotDisposed();
     const result = await this.dictionary.load(filePath, options);
+    this.words = [];
     return result;
   }
 
@@ -201,6 +208,7 @@ export default class TextDarts {
   public loadSync(filePath: string, options?: LoadOptions): boolean {
     this.ensureNotDisposed();
     const result = this.dictionary.loadSync(filePath, options);
+    this.words = [];
     return result;
   }
 
@@ -221,11 +229,11 @@ export default class TextDarts {
 
   /**
    * Ensures the object is not disposed
-   * @throws Error if the object is disposed
+   * @throws {DartsError} if the object is disposed
    */
   private ensureNotDisposed(): void {
     if (this.isDisposed) {
-      throw new Error('TextDarts object has been disposed');
+      throw new DartsError('TextDarts object has been disposed');
     }
   }
 
