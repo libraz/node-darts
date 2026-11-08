@@ -8,12 +8,9 @@ Thank you for your interest in contributing to node-darts! This document provide
 
 - Node.js v20.0.0 or later
 - Yarn v4.0.0 or later (the repo pins `yarn@4.18.0` via `mise.toml` / `packageManager`)
-- C++ compiler with C++17 support
-  - Windows: Visual Studio 2019 or later with C++ build tools
-  - macOS: Xcode Command Line Tools
-  - Linux: GCC 7 or later, build-essential
+- Rust via [rustup](https://rustup.rs/). `rust-toolchain.toml` pins the version and adds the `wasm32-unknown-unknown` target, so rustup installs the right toolchain on first use.
 
-Both Darts backends (`darts` and `darts-clone`) are vendored under `src/native/third_party/` and compiled into a single native addon, so no submodule init is required.
+The trie core lives in `core/` (a Rust crate, not published). `yarn build:wasm` compiles it to WebAssembly and embeds the binary into `src/generated/darts-wasm.ts`, which the TypeScript build and the test suite import.
 
 ### Setting Up
 
@@ -32,7 +29,7 @@ This project uses [mise](https://mise.jdx.dev/) to manage Node.js and Yarn versi
    yarn install
    ```
 
-   This will automatically build the native addon after installing dependencies.
+   This also runs `yarn build` (the `prepare` script), which compiles the WebAssembly core.
 
 3. Verify the setup:
    ```bash
@@ -49,7 +46,9 @@ To build the project:
 yarn build
 ```
 
-This will compile the TypeScript code and build the native addon.
+This compiles the WebAssembly core and the TypeScript code.
+
+After changing anything under `core/`, run `yarn build:wasm` before `yarn test`; the JS suite runs against the embedded binary.
 
 To clean the build artifacts:
 
@@ -59,11 +58,19 @@ yarn clean
 
 ### Testing
 
-To run tests:
+To run everything (Rust unit and oracle tests, then the JS suite once per backend):
+
+```bash
+make test
+```
+
+The JS suite alone:
 
 ```bash
 yarn test
 ```
+
+`core/tests/oracle.rs` compares both Rust builders and every search against images and results recorded from the original C++ libraries (`core/tests/fixtures/oracle/`). Built dictionaries must match those images byte for byte.
 
 To run tests with coverage:
 
@@ -74,11 +81,11 @@ yarn test:coverage
 Tests are organised into tiers under `tests/`:
 
 - `tests/unit/` — fast unit tests for the core TypeScript layer
-- `tests/integration/` — exercises the native addon end-to-end
+- `tests/integration/` — exercises the package end-to-end
 - `tests/perf/` — performance smoke + heavy benchmarks
 - `tests/regression/` — pinned regression cases
 
-Vitest runs with `pool: 'forks'` and `fileParallelism: false` so the process-global native handle table is isolated between files. See `vitest.config.mts`.
+Vitest runs with `pool: 'forks'` and `fileParallelism: false` so the module-global handle table of the WebAssembly core is isolated between files. See `vitest.config.mts`.
 
 #### Running tests against the `darts-clone` backend
 
@@ -164,66 +171,45 @@ yarn ci          # biome ci (used in CI; fails on any issue)
 - **Write all comments in English.** This is important for maintaining consistency and ensuring that all contributors can understand the code.
 - Use design patterns appropriately. For example, the TextDarts class uses the Factory Method pattern to encapsulate object creation logic.
 
-### C++
+### Rust
 
-- Follow the Google C++ Style Guide.
-- Use modern C++17 features where appropriate.
-- Handle errors properly and propagate them to JavaScript.
-- Avoid memory leaks by properly managing resources.
+- `rustfmt` and `clippy` (pedantic, configured in `core/Cargo.toml`) must be clean; `make format` fixes formatting for Rust and TypeScript and then runs every linter, `make format-check` is the read-only CI gate.
+- Search code must never panic on a loaded image: index with bounds checks and treat an out-of-range read as a miss.
+- Builders must keep their output byte-identical to the upstream libraries; the oracle test enforces it.
+- `unsafe` is confined to the C ABI in `core/src/ffi.rs`.
 
 ## Project Structure
 
 ```
 node-darts/
-├── scripts/                      # Build scripts
-│   ├── postbuild-copy.cjs        # Copies non-TS assets into dist/ after build
-│   └── install-build-tools.js    # Best-effort native toolchain bootstrap (Windows)
-├── src/                          # Source code
-│   ├── native/                   # C++ native code
-│   │   ├── bindings.cpp          # Node-API bindings entry point + handle table
-│   │   ├── bindings.d.ts         # TypeScript types for the `bindings` package
-│   │   ├── dictionary.cpp        # Dictionary native dispatch (BackendDict)
-│   │   ├── dictionary.h          # Dictionary header
-│   │   ├── builder.cpp           # Builder native dispatch (BackendDict)
-│   │   ├── builder.h             # Builder header
-│   │   ├── backend.h             # BackendDict virtual interface + factory
-│   │   ├── backend_factory.cpp   # MakeBackend() dispatcher
-│   │   ├── backend_darts.cpp     # taku910/darts implementation of BackendDict
-│   │   ├── backend_clone.cpp     # darts-clone implementation (namespace-rename trick)
-│   │   ├── common.h              # Shared declarations (handle table, backend parser)
-│   │   └── third_party/
-│   │       ├── darts/            # taku910/darts (C++17-patched)
-│   │       └── darts-clone/      # s-yata/darts-clone (vendored, header-only)
-│   ├── core/                     # TypeScript core implementation
-│   │   ├── types.ts              # Type definitions
-│   │   ├── errors.ts             # Error definitions
-│   │   ├── native.ts             # Native module TypeScript wrapper
+├── core/                         # Rust crate compiled to WebAssembly (not published)
+│   ├── src/
+│   │   ├── darts.rs              # Darts 0.32 double-array: build, load, search
+│   │   ├── clone/                # darts-clone double-array (DAWG builder, units)
+│   │   ├── dict.rs               # Backend-neutral layer: input contract, auto-detect
+│   │   └── ffi.rs                # C ABI exported to JS: handle table, status codes
+│   └── tests/                    # Oracle tests against upstream recordings
+├── scripts/
+│   ├── build-wasm.mjs            # cargo build + embed into src/generated/
+│   └── postbuild-copy.cjs        # Writes dist/ type and module-format markers
+├── src/
+│   ├── core/
+│   │   ├── wasm.ts               # Instantiates the core; memory marshalling
+│   │   ├── native.ts             # Validating wrapper, error mapping, file I/O
 │   │   ├── builder.ts            # Builder class
 │   │   ├── dictionary.ts         # Dictionary class
-│   │   └── utils.ts              # Utility functions
+│   │   ├── types.ts / errors.ts / utils.ts
+│   ├── generated/                # Embedded WebAssembly (gitignored)
 │   ├── text-darts.ts             # TextDarts class (Factory Method pattern)
 │   ├── index.ts                  # Package entry point (CommonJS)
-│   └── index.esm.ts              # ESM wrapper for the native module
-├── tests/                        # Vitest test suite (tiered)
-│   ├── unit/                     # Fast unit tests for the TS core
-│   ├── integration/              # End-to-end native addon tests
-│   ├── perf/                     # perf-smoke (always on) + performance (skipped)
-│   └── regression/               # Pinned regression cases
-├── examples/                     # Example code
-│   ├── basic-usage.js
-│   ├── dictionary-builder.js
-│   ├── text-replacement.js
-│   ├── text-replacement.ts
-│   ├── auto-complete.js
-│   ├── error-handling.js
-│   ├── morphological-analysis.js
-│   └── ja/                       # Japanese-localised examples
-├── biome.json                    # Biome lint/format config
-├── vitest.config.mts              # Vitest config (pool='forks', fileParallelism=false)
-├── binding.gyp                   # node-gyp build (compiles both backends)
-├── tsconfig.json                 # TypeScript base config
-├── tsconfig.build.cjs.json       # CommonJS build config
-└── tsconfig.build.esm.json       # ESM build config
+│   └── index.esm.ts              # ESM entry point
+├── tests/                        # Vitest suite: unit, integration, perf, regression
+├── examples/
+├── Cargo.toml / rust-toolchain.toml / rustfmt.toml
+├── Makefile                      # build, test, format, format-check, lint
+├── biome.json
+├── vitest.config.mts
+└── tsconfig*.json
 ```
 
 ## License

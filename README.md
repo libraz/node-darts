@@ -1,6 +1,6 @@
 # node-darts
 
-Node.js Native Addon for Darts (Double-ARray Trie System)
+Darts (Double-ARray Trie System) for Node.js, compiled to WebAssembly
 
 [![CI](https://img.shields.io/github/actions/workflow/status/libraz/node-darts/ci.yml?branch=main&label=CI)](https://github.com/libraz/node-darts/actions)
 [![npm](https://img.shields.io/npm/v/node-darts)](https://www.npmjs.com/package/node-darts)
@@ -9,7 +9,7 @@ Node.js Native Addon for Darts (Double-ARray Trie System)
 
 ## Overview
 
-`node-darts` is a Node.js native addon that provides bindings to the C++ Darts (Double-ARray Trie System) library. It allows you to use `.darts` dictionary files in Node.js/TypeScript environments with high performance.
+`node-darts` brings the Darts (Double-ARray Trie System) dictionary to Node.js/TypeScript. The trie core is written in Rust and compiled to WebAssembly, so the package installs the same way on every platform: no compiler, no prebuilt binary download, no install script. Dictionary files are byte-compatible with those written by the C++ Darts and darts-clone libraries.
 
 ## Features
 
@@ -22,7 +22,7 @@ Node.js Native Addon for Darts (Double-ARray Trie System)
 - TypeScript support
 - ESModule and CommonJS support
 - Class-based interface similar to Perl's `Text::Darts`
-- Dual backend (taku910's Darts and s-yata's darts-clone) selectable at runtime
+- Two on-disk formats (Darts 0.32 and darts-clone) selectable per dictionary
 
 ## Installation
 
@@ -35,20 +35,8 @@ yarn add node-darts
 ## Requirements
 
 - Node.js v20.0.0 or later
-- C++ compiler with C++17 support
 
-### Windows-specific Requirements
-
-If you're on Windows, you'll need:
-
-- Visual Studio Build Tools with C++ workload
-- Python 2.7 or 3.x
-
-The package will attempt to install these dependencies automatically during installation if they're missing. If automatic installation fails, you can install them manually:
-
-1. Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) with the "Desktop development with C++" workload
-2. Install [Python](https://www.python.org/downloads/) (2.7 or 3.x)
-3. Set the npm config: `npm config set msvs_version 2019`
+Nothing else: the WebAssembly module is embedded in the package and runs on any OS and CPU architecture Node.js supports.
 
 ## Basic Usage
 
@@ -290,11 +278,14 @@ darts.dispose();
 
 ## Backends (Darts vs darts-clone)
 
-Both Darts implementations are compiled into the single native addon, so callers
-can pick between them at runtime via a `backend` option:
+Both double-array layouts are built into the WebAssembly core, so callers can
+pick between them per dictionary via a `backend` option:
 
-- `'darts'` (default) — taku910's original Darts library
-- `'clone'` — s-yata's faster, more compact `darts-clone` reimplementation
+- `'darts'` (default) — the original Darts 0.32 format
+- `'clone'` — the more compact `darts-clone` format
+
+Files are byte-compatible with those written by the corresponding C++ library,
+in both directions.
 
 ```javascript
 // Build with explicit backend
@@ -320,8 +311,10 @@ The public API is identical for both, but a few behaviours differ:
   cannot be loaded by the other.
 - `darts-clone` rejects zero-length keys at build time; the original silently
   accepts them.
-- `darts-clone` rejects malformed dictionary files at load time; the original
-  may accept them and crash later — auto-detect prefers clone for that reason.
+- `darts-clone` rejects malformed dictionary files at load time; the Darts
+  format has no header to validate, so it accepts any file (searches on a
+  malformed one return misses rather than crashing). Auto-detect tries clone
+  first for that reason.
 
 Use `dict.getBackend()` (or `TextDarts#getBackend()`) to introspect which
 backend a dictionary is currently using.
@@ -339,26 +332,16 @@ The library provides the following custom error classes:
 
 The `node-darts` project itself is released under the MIT License (see [LICENSE](./LICENSE)).
 
-This package bundles third-party C++ sources that retain their original licenses:
+The WebAssembly core is a Rust port of two libraries that keep their original licenses:
 
-- **Darts** (Taku Kudo) — dual-licensed under the BSD License or LGPL. See `src/native/third_party/darts/COPYING`, `BSD`, and `LGPL`.
-- **darts-clone** (Susumu Yata) — BSD 2-Clause License. See `src/native/third_party/darts-clone/COPYING.md`.
+- **Darts** (Taku Kudo) — dual-licensed under the BSD License or LGPL; the port is distributed under the BSD License.
+- **darts-clone** (Susumu Yata) — BSD 2-Clause License.
 
-A consolidated summary of third-party copyrights and licenses is available in [NOTICE](./NOTICE).
+Their copyright notices and license texts are reproduced in [NOTICE](./NOTICE).
 
 ## Acknowledgements
 
-This project bundles two third-party C++ libraries:
+The trie core ports two libraries:
 
 - [Darts (Double-ARray Trie System)](http://chasen.org/~taku/software/darts/) by Taku Kudo, distributed under the BSD License or LGPL.
 - [darts-clone](https://github.com/s-yata/darts-clone) by Susumu Yata, distributed under the BSD 2-Clause License.
-
-## Implementation Notes
-
-The original Darts library has been modified for C++17 compatibility:
-
-- Removed the `register` keyword which is deprecated in C++17
-- No functional changes were made to the library
-- The original copyright and license notices have been preserved
-
-These modifications were made in accordance with the project requirements to respect the original code while ensuring compatibility with modern C++ standards.

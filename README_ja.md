@@ -1,6 +1,6 @@
 # node-darts
 
-Node.js用 Darts（Double-ARray Trie System）ネイティブアドオン
+Node.js 用 Darts（Double-ARray Trie System）。WebAssembly で動作します
 
 [![CI](https://img.shields.io/github/actions/workflow/status/libraz/node-darts/ci.yml?branch=main&label=CI)](https://github.com/libraz/node-darts/actions)
 [![npm](https://img.shields.io/npm/v/node-darts)](https://www.npmjs.com/package/node-darts)
@@ -9,7 +9,7 @@ Node.js用 Darts（Double-ARray Trie System）ネイティブアドオン
 
 ## 概要
 
-`node-darts`は、C++版Dartsライブラリ（Double-ARray Trie System）へのバインディングを提供するNode.jsネイティブアドオンです。Node.js/TypeScript環境で`.darts`辞書ファイルを高パフォーマンスで利用できます。
+`node-darts`は、Darts（Double-ARray Trie System）の辞書を Node.js/TypeScript から使うためのライブラリです。トライの中核は Rust で書かれ、WebAssembly にコンパイルされています。そのため、どのプラットフォームでも同じ手順でインストールでき、コンパイラもビルド済みバイナリのダウンロードも install スクリプトも不要です。辞書ファイルは C++ 版の Darts および darts-clone が書き出すものとバイト単位で互換です。
 
 ## 特徴
 
@@ -22,7 +22,7 @@ Node.js用 Darts（Double-ARray Trie System）ネイティブアドオン
 - TypeScriptサポート
 - ESModuleとCommonJSのサポート
 - Perlの`Text::Darts`に似たクラスベースのインターフェース
-- 2 つのバックエンド（taku910 の Darts と s-yata の darts-clone）をランタイムで選択可能
+- 2 つのディスク形式（Darts 0.32 と darts-clone）を辞書ごとに選択可能
 
 ## インストール
 
@@ -35,20 +35,8 @@ yarn add node-darts
 ## 要件
 
 - Node.js v20.0.0以上
-- C++17をサポートするC++コンパイラ
 
-### Windows環境での要件
-
-Windowsを使用している場合、以下が必要です：
-
-- C++ワークロードを含むVisual Studio Build Tools
-- Python 2.7または3.x
-
-これらの依存関係がない場合、パッケージはインストール時に自動的にインストールを試みます。自動インストールが失敗した場合は、手動でインストールできます：
-
-1. [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)をインストールし、「C++によるデスクトップ開発」ワークロードを選択
-2. [Python](https://www.python.org/downloads/)（2.7または3.x）をインストール
-3. npm設定を行う：`npm config set msvs_version 2019`
+これ以外は不要です。WebAssembly モジュールはパッケージに埋め込まれており、Node.js が動く OS と CPU アーキテクチャならどこでも動作します。
 
 ## 基本的な使用方法
 
@@ -290,10 +278,12 @@ darts.dispose();
 
 ## バックエンド (Darts vs darts-clone)
 
-両方の Darts 実装が一つのネイティブアドオンに同居しており、`backend` オプションでランタイムに選択できます:
+2 つのダブル配列形式はどちらも WebAssembly コアに組み込まれており、`backend` オプションで辞書ごとに選択できます:
 
-- `'darts'` (デフォルト) — taku910 によるオリジナルの Darts ライブラリ
-- `'clone'` — s-yata による、より高速でコンパクトな `darts-clone` 再実装
+- `'darts'` (デフォルト) — オリジナルの Darts 0.32 形式
+- `'clone'` — よりコンパクトな `darts-clone` 形式
+
+ファイルは対応する C++ ライブラリが書き出すものとバイト単位で互換で、相互に読み書きできます。
 
 ```javascript
 // 明示的にバックエンドを指定して構築
@@ -315,7 +305,7 @@ const explicit = loadDictionary(file, { backend: 'clone' });
 
 - **ディスク上のフォーマットに互換性はありません。** 一方のバックエンドで構築した `.darts` ファイルはもう一方では読み込めません。
 - `darts-clone` は構築時に長さ0のキーを拒否しますが、オリジナルは黙って受け入れます。
-- `darts-clone` は読み込み時に不正な辞書ファイルを拒否しますが、オリジナルは受け入れた後にクラッシュする可能性があります — 自動判別が clone を優先するのはこのためです。
+- `darts-clone` は読み込み時に不正な辞書ファイルを拒否します。Darts 形式には検証できるヘッダがないため、どんなファイルでも受け入れます（不正なファイルに対する検索はクラッシュせず、見つからない扱いになります）。自動判別が clone を先に試すのはこのためです。
 
 `dict.getBackend()` (または `TextDarts#getBackend()`) で、辞書が現在どちらのバックエンドを使っているかを確認できます。
 
@@ -332,26 +322,16 @@ const explicit = loadDictionary(file, { backend: 'clone' });
 
 `node-darts` プロジェクト自体は MIT ライセンスで提供されます（[LICENSE](./LICENSE) を参照）。
 
-本パッケージは以下のサードパーティ C++ ソースを同梱しており、それらは各々のライセンスを保持します:
+WebAssembly コアは以下 2 つのライブラリの Rust 移植で、各ライブラリのライセンスを引き継ぎます:
 
-- **Darts**（Taku Kudo 氏）— BSD ライセンスまたは LGPL のデュアルライセンス。`src/native/third_party/darts/COPYING`, `BSD`, `LGPL` を参照。
-- **darts-clone**（Susumu Yata 氏）— BSD 2-Clause ライセンス。`src/native/third_party/darts-clone/COPYING.md` を参照。
+- **Darts**（Taku Kudo 氏）— BSD ライセンスまたは LGPL のデュアルライセンス。移植版は BSD ライセンスで配布します。
+- **darts-clone**（Susumu Yata 氏）— BSD 2-Clause ライセンス。
 
-サードパーティの著作権およびライセンスのまとめは [NOTICE](./NOTICE) を参照してください。
+著作権表示とライセンス本文は [NOTICE](./NOTICE) に収録しています。
 
 ## 謝辞
 
-このプロジェクトは以下 2 つのサードパーティ C++ ライブラリを同梱しています:
+トライの中核は以下 2 つのライブラリを移植したものです:
 
 - [Darts（Double-ARray Trie System）](http://chasen.org/~taku/software/darts/) — Taku Kudo 氏、BSD ライセンスまたは LGPL で配布。
 - [darts-clone](https://github.com/s-yata/darts-clone) — Susumu Yata 氏、BSD 2-Clause ライセンスで配布。
-
-## 実装に関する注意点
-
-オリジナルのDartsライブラリはC++17互換性のために以下の修正を行っています：
-
-- C++17で非推奨となった`register`キーワードを削除
-- ライブラリの機能的な変更は一切行っていません
-- オリジナルの著作権表示とライセンス通知は保持されています
-
-これらの修正は、プロジェクトの要件に従って、オリジナルのコードを尊重しつつ、現代のC++標準との互換性を確保するために行われました。
