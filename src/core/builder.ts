@@ -26,7 +26,7 @@ export default class Builder {
     options?.progressCallback?.(0, total);
 
     try {
-      // Sorting and duplicate removal happen natively on (key, value) pairs,
+      // Sorting and duplicate removal happen in the core on (key, value) pairs,
       // so an omitted value stays the key's index in the caller's array.
       const handle = dartsNative.build(keys, values, options?.backend);
       options?.progressCallback?.(total, total);

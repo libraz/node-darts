@@ -54,25 +54,17 @@ describe('Dual Package Support', () => {
   });
 });
 
-// Test for prebuild support
-describe('Prebuild Support', () => {
-  it('should have node-pre-gyp in dependencies', () => {
-    const packageJson = require('../../package.json');
-    expect(packageJson.dependencies).toHaveProperty('@mapbox/node-pre-gyp');
+// Test for the published package shape
+describe('Package distribution', () => {
+  const packageJson = require('../../package.json');
+
+  it('installs without a build step or platform binary', () => {
+    expect(packageJson.scripts).not.toHaveProperty('install');
+    expect(packageJson).not.toHaveProperty('binary');
+    expect(packageJson.dependencies ?? {}).toEqual({});
   });
 
-  it('should have binary configuration in package.json', () => {
-    const packageJson = require('../../package.json');
-    expect(packageJson).toHaveProperty('binary');
-    expect(packageJson.binary).toHaveProperty('module_name');
-    expect(packageJson.binary).toHaveProperty('module_path');
-    expect(packageJson.binary).toHaveProperty('host');
-  });
-
-  it('should have install script using node-pre-gyp', () => {
-    const packageJson = require('../../package.json');
-    expect(packageJson.scripts).toHaveProperty('install');
-    expect(packageJson.scripts.install).toContain('node-pre-gyp');
-    expect(packageJson.scripts.install).toContain('--fallback-to-build');
+  it('ships only the compiled output and license files', () => {
+    expect(packageJson.files).toEqual(['dist', 'LICENSE', 'NOTICE']);
   });
 });

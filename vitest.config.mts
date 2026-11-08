@@ -6,19 +6,19 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     globals: true,
     testTimeout: 30000,
-    // Native addon state is process-global. Use child processes per file so
-    // each test file starts with a clean DartsDict registry.
+    // The WebAssembly core's handle table is module-global. Use child
+    // processes per file so each test file starts with a clean table.
     pool: 'forks',
     isolate: true,
-    // Tests share /tmp dir naming based on Date.now() and the native addon's
-    // global handle table is process-global; running files sequentially
+    // Tests share /tmp dir naming based on Date.now() and some assert handle
+    // reuse in the module-global handle table; running files sequentially
     // avoids cross-file races without rewriting every fixture.
     fileParallelism: false,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.d.ts', 'src/**/index.ts', 'src/**/index.esm.ts'],
+      exclude: ['src/generated/**', 'src/**/*.d.ts', 'src/**/index.ts', 'src/**/index.esm.ts'],
       thresholds: {
         branches: 60,
         functions: 95,

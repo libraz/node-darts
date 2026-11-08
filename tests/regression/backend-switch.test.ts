@@ -1,5 +1,5 @@
 /**
- * Backend switching tests for the dual-backend native addon.
+ * Backend switching tests for the two double-array layouts.
  *
  * Verifies:
  *  - both backends build and search correctly

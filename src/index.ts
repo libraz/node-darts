@@ -1,5 +1,5 @@
 /**
- * node-darts: Node.js Native Addon for Darts (Double-ARray Trie System)
+ * node-darts: Darts (Double-ARray Trie System) for Node.js, compiled to WebAssembly
  *
  * This package binds the C++ version of Darts, making .darts dictionary files
  * available in Node.js/TypeScript environments.

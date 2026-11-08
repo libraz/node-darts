@@ -1,176 +1,56 @@
 import * as fs from 'node:fs';
-import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import bindings from 'bindings';
 import { BuildError, DartsError, FileNotFoundError, InvalidDictionaryError } from './errors.js';
 import type { Backend, DartsNative, TraverseCallback } from './types.js';
+import { BACKEND_AUTO, Status, wasmCore } from './wasm.js';
 
-// The compiled output of this file lives at:
-//   <pkg-root>/dist/cjs/core/native.js  (CJS build)
-//   <pkg-root>/dist/esm/core/native.js  (ESM build)
-// `dist/{cjs,esm}/` carries a `package.json` marker that pins the module format.
-// Those markers would short-circuit `bindings()`'s default upward walk for the
-// package root, so we walk up ourselves until we find the real `package.json`
-// (the one carrying the node-pre-gyp `binary` config) and pass it explicitly
-// as `module_root`. Stack inspection lets us discover this file's location
-// without needing `__dirname` (CJS-only) or `import.meta.url` (ESM-only).
-function resolveModuleRoot(): string | null {
-  const stack = new Error().stack ?? '';
-  for (const rawLine of stack.split('\n')) {
-    const line = rawLine.trim();
-    const match =
-      line.match(/\(([^()]+):\d+:\d+\)$/) || line.match(/^at\s+(?:async\s+)?([^()]+):\d+:\d+$/);
-    if (!match) continue;
-    let filePath = match[1];
-    if (filePath.startsWith('file://')) {
-      try {
-        filePath = fileURLToPath(filePath);
-      } catch {
-        continue;
-      }
-    }
-    if (!filePath.includes(`${path.sep}core${path.sep}native.`)) continue;
-    let dir = path.dirname(filePath);
-    while (true) {
-      const pkgPath = path.join(dir, 'package.json');
-      if (fs.existsSync(pkgPath)) {
-        try {
-          const data = JSON.parse(fs.readFileSync(pkgPath, 'utf8')) as {
-            name?: unknown;
-            binary?: { module_name?: unknown };
-          };
-          if (data?.binary?.module_name === 'node_darts' || data?.name === 'node-darts') {
-            return dir;
-          }
-        } catch {
-          // ignore malformed package.json and keep walking up
-        }
-      }
-      const parent = path.dirname(dir);
-      if (parent === dir) break;
-      dir = parent;
-    }
-    return null;
-  }
-  return null;
-}
+const INT32_MAX = 2147483647;
 
 // Resolve the default backend used when callers don't pass one explicitly.
 // Set NODE_DARTS_DEFAULT_BACKEND=clone in CI to exercise the same test suite
 // against the darts-clone backend without rewriting individual tests.
 function resolveDefaultBackend(): Backend {
-  const v = process.env.NODE_DARTS_DEFAULT_BACKEND;
-  return v === 'clone' ? 'clone' : 'darts';
+  return process.env.NODE_DARTS_DEFAULT_BACKEND === 'clone' ? 'clone' : 'darts';
 }
 const defaultBackend: Backend = resolveDefaultBackend();
 
-// Load native module
-let native: DartsNative;
+const BACKEND_CODES: Record<Backend, number> = { darts: 0, clone: 1 };
+const BACKEND_NAMES: Backend[] = ['darts', 'clone'];
 
-const moduleRoot = resolveModuleRoot();
-const bindingsOpts = moduleRoot
-  ? { bindings: 'node_darts', module_root: moduleRoot }
-  : ('node_darts' as const);
+function backendCode(backend: Backend | undefined | null, fallback: Backend): number {
+  const name = backend ?? fallback;
+  if (!Object.hasOwn(BACKEND_CODES, name)) {
+    throw new TypeError("backend must be 'darts' or 'clone'");
+  }
+  return BACKEND_CODES[name];
+}
 
-try {
-  // Try standard bindings approach first
-  native = bindings(bindingsOpts);
-} catch (originalError) {
-  // Only attempt fallback in Windows CI environment
-  const isWindows = process.platform === 'win32';
-  const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+/** Validates a handle before it is narrowed to u32 at the boundary. */
+function handleArg(handle: number): number {
+  if (!Number.isInteger(handle) || handle < 0 || handle > 0xffffffff) {
+    throw new DartsError('Invalid dictionary handle');
+  }
+  return handle;
+}
 
-  if (isWindows && isCI) {
-    console.warn(
-      `WARNING: Failed to load native module using standard bindings in Windows CI environment: ${originalError}`
-    );
-    console.warn('Attempting to use fallback mechanism to locate the module...');
-
-    // Try to find the module in common locations
-    const possiblePaths = [
-      // Standard build paths
-      path.join(process.cwd(), 'build', 'Release', 'node_darts.node'),
-      path.join(process.cwd(), 'build', 'Debug', 'node_darts.node'),
-      path.join(process.cwd(), 'build', 'node_darts.node'),
-      path.join(process.cwd(), 'build', 'default', 'node_darts.node'),
-
-      // Output paths
-      path.join(process.cwd(), 'out', 'Release', 'node_darts.node'),
-      path.join(process.cwd(), 'out', 'Debug', 'node_darts.node'),
-
-      // Direct paths
-      path.join(process.cwd(), 'Release', 'node_darts.node'),
-      path.join(process.cwd(), 'Debug', 'node_darts.node'),
-
-      // Addon build paths
-      path.join(process.cwd(), 'addon-build', 'release', 'install-root', 'node_darts.node'),
-      path.join(process.cwd(), 'addon-build', 'debug', 'install-root', 'node_darts.node'),
-      path.join(process.cwd(), 'addon-build', 'default', 'install-root', 'node_darts.node'),
-
-      // Node version specific paths
-      path.join(
-        process.cwd(),
-        'lib',
-        'binding',
-        `node-v${process.versions.modules}-${process.platform}-${process.arch}`,
-        'node_darts.node'
-      ),
-      path.join(
-        process.cwd(),
-        'compiled',
-        process.version.slice(1),
-        process.platform,
-        process.arch,
-        'node_darts.node'
-      ),
-
-      // Legacy paths
-      path.join(process.cwd(), 'build', 'lib', 'binding', 'node_darts.node'),
-      path.join(process.cwd(), 'lib', 'binding', 'node-v115-win32-x64', 'node_darts.node'),
-    ];
-
-    // Log all paths we're checking
-    console.warn('Checking the following paths:');
-    possiblePaths.forEach((p) => {
-      console.warn(` - ${p}`);
-    });
-
-    // Initialize a variable to track if we found the module
-    let foundModule = false;
-
-    // Use forEach instead of for...of to satisfy ESLint
-    possiblePaths.forEach((modulePath) => {
-      if (!foundModule && fs.existsSync(modulePath)) {
-        console.warn(`Found native module at: ${modulePath}`);
-        try {
-          // We need to use dynamic require here, but ESLint doesn't like it
-          // So we'll disable the relevant rules for this specific line
-          // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires, import/no-dynamic-require, global-require
-          const dynamicModule = require(modulePath);
-          native = dynamicModule;
-          foundModule = true;
-          console.warn('Successfully loaded native module using fallback mechanism');
-        } catch (requireError) {
-          console.warn(`Failed to require module at ${modulePath}: ${requireError}`);
-        }
-      }
-    });
-
-    if (!foundModule) {
-      console.error('ERROR: Native module not found in any alternative paths');
-      throw new Error(
-        `Failed to load native module using fallback mechanism. Original error: ${originalError}`
-      );
-    }
-  } else {
-    // In non-Windows or non-CI environments, just throw the original error
-    throw originalError;
+function checkKey(key: unknown): asserts key is string {
+  if (typeof key !== 'string') {
+    throw new DartsError('Search key must be a string');
   }
 }
 
+/** Throws for a negative status shared by every handle-taking call. */
+function check(status: number): number {
+  if (status === Status.ERR_HANDLE) {
+    throw new DartsError('Invalid dictionary handle');
+  }
+  return status;
+}
+
+const encoder = new TextEncoder();
+
 /**
- * Wrapper class for native module
- * Adds error handling and provides a TypeScript-friendly interface
+ * Wrapper over the WebAssembly core.
+ * Adds input validation and error mapping, and provides a TypeScript-friendly interface.
  */
 export class DartsNativeWrapper implements DartsNative {
   /**
@@ -178,37 +58,20 @@ export class DartsNativeWrapper implements DartsNative {
    * @param backend backend kind to allocate (defaults to 'darts')
    * @returns dictionary handle
    */
-  // eslint-disable-next-line class-methods-use-this
   createDictionary(backend?: Backend): number {
     try {
-      const handle = native.createDictionary(backend ?? defaultBackend);
-      if (handle === null || handle === undefined) {
-        throw new DartsError('Failed to create dictionary');
-      }
-      return handle;
+      return wasmCore.create(backendCode(backend, defaultBackend));
     } catch (error) {
-      if (error instanceof DartsError) {
-        throw error;
-      }
-      throw new DartsError(
-        `Failed to create dictionary: ${error instanceof Error ? error.message : String(error)}`
-      );
+      throw new DartsError(`Failed to create dictionary: ${(error as Error).message}`);
     }
   }
 
   /**
-   * Destroys a dictionary object
+   * Destroys a dictionary object. Destroying an unknown handle is a no-op.
    * @param handle dictionary handle
    */
-  // eslint-disable-next-line class-methods-use-this
   destroyDictionary(handle: number): void {
-    try {
-      native.destroyDictionary(handle);
-    } catch (error) {
-      throw new DartsError(
-        `Failed to destroy dictionary: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    wasmCore.destroy(handleArg(handle));
   }
 
   /**
@@ -217,56 +80,83 @@ export class DartsNativeWrapper implements DartsNative {
    * @param filePath path to the dictionary file
    * @param backend if provided, only that backend is used; otherwise the
    *   loader auto-detects (darts-clone first, falling back to taku910)
-   * @returns true if successful, false otherwise
+   * @returns true; failures throw
    */
-  // eslint-disable-next-line class-methods-use-this
   loadDictionary(handle: number, filePath: string, backend?: Backend): boolean {
-    // Check if the file exists
     if (!fs.existsSync(filePath)) {
       throw new FileNotFoundError(filePath);
     }
-
+    let image: Uint8Array;
     try {
-      const result = native.loadDictionary(handle, filePath, backend);
-      if (result === false) {
-        throw new InvalidDictionaryError(`Failed to load dictionary from ${filePath}`);
-      }
-      return result;
+      image = fs.readFileSync(filePath);
     } catch (error) {
-      if (error instanceof DartsError) {
-        throw error;
-      }
-      // Detect file not found error from error message
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('not found') || errorMessage.includes('No such file')) {
+      throw new InvalidDictionaryError(
+        `Failed to read dictionary from ${filePath}: ${(error as Error).message}`
+      );
+    }
+    return this.loadImage(handle, image, filePath, backend);
+  }
+
+  /**
+   * Loads a dictionary file without blocking the event loop while reading it
+   * @param handle dictionary handle
+   * @param filePath path to the dictionary file
+   * @param backend see {@link DartsNativeWrapper.loadDictionary}
+   * @returns true; failures reject
+   */
+  async loadDictionaryAsync(handle: number, filePath: string, backend?: Backend): Promise<boolean> {
+    let image: Uint8Array;
+    try {
+      image = await fs.promises.readFile(filePath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
         throw new FileNotFoundError(filePath);
       }
-      throw new InvalidDictionaryError(errorMessage);
+      throw new InvalidDictionaryError(
+        `Failed to read dictionary from ${filePath}: ${(error as Error).message}`
+      );
     }
+    return this.loadImage(handle, image, filePath, backend);
+  }
+
+  private loadImage(
+    handle: number,
+    image: Uint8Array,
+    filePath: string,
+    backend: Backend | undefined
+  ): boolean {
+    let code: number;
+    try {
+      code =
+        backend === undefined || backend === null ? BACKEND_AUTO : backendCode(backend, 'darts');
+    } catch (error) {
+      throw new InvalidDictionaryError((error as Error).message);
+    }
+    const status = check(wasmCore.load(handleArg(handle), image, code));
+    if (status !== Status.OK) {
+      throw new InvalidDictionaryError(`Failed to load dictionary from ${filePath}`);
+    }
+    return true;
   }
 
   /**
    * Saves a dictionary file
    * @param handle dictionary handle
    * @param filePath destination file path
-   * @returns true if successful, false otherwise
+   * @returns true; failures throw
    */
-  // eslint-disable-next-line class-methods-use-this
   saveDictionary(handle: number, filePath: string): boolean {
-    try {
-      const result = native.saveDictionary(handle, filePath);
-      if (result === false) {
-        throw new DartsError(`Failed to save dictionary to ${filePath}`);
-      }
-      return result;
-    } catch (error) {
-      if (error instanceof DartsError) {
-        throw error;
-      }
-      throw new DartsError(
-        `Failed to save dictionary: ${error instanceof Error ? error.message : String(error)}`
-      );
+    const image = wasmCore.save(handleArg(handle));
+    if (typeof image === 'number') {
+      check(image);
+      throw new DartsError(`Failed to save dictionary to ${filePath}: dictionary is empty`);
     }
+    try {
+      fs.writeFileSync(filePath, image);
+    } catch (error) {
+      throw new DartsError(`Failed to save dictionary to ${filePath}: ${(error as Error).message}`);
+    }
+    return true;
   }
 
   /**
@@ -275,49 +165,59 @@ export class DartsNativeWrapper implements DartsNative {
    * @param key search key
    * @returns the corresponding value if found, -1 otherwise
    */
-  // eslint-disable-next-line class-methods-use-this
   exactMatchSearch(handle: number, key: string): number {
-    try {
-      return native.exactMatchSearch(handle, key);
-    } catch (error) {
-      throw new DartsError(
-        `Failed to perform exact match search: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    checkKey(key);
+    const [status, value] = wasmCore.exact(handleArg(handle), key);
+    check(status);
+    return value;
   }
 
   /**
    * Performs a common prefix search
    * @param handle dictionary handle
    * @param key search key
-   * @returns array of found values
+   * @returns array of found values, shortest prefix first
    */
-  // eslint-disable-next-line class-methods-use-this
   commonPrefixSearch(handle: number, key: string): number[] {
-    try {
-      return native.commonPrefixSearch(handle, key);
-    } catch (error) {
-      throw new DartsError(
-        `Failed to perform common prefix search: ${error instanceof Error ? error.message : String(error)}`
-      );
+    checkKey(key);
+    const result = wasmCore.prefix(handleArg(handle), key);
+    if (typeof result === 'number') {
+      check(result);
+      return [];
     }
+    return result;
   }
 
   /**
-   * Traverses the trie
+   * Traverses the trie one UTF-8 byte at a time, calling `callback` per step
+   * until it returns false or the key leaves the trie
    * @param handle dictionary handle
    * @param key search key
    * @param callback callback function
    */
-  // eslint-disable-next-line class-methods-use-this
   traverse(handle: number, key: string, callback: TraverseCallback): void {
-    try {
-      native.traverse(handle, key, callback);
-    } catch (error) {
-      throw new DartsError(
-        `Failed to traverse: ${error instanceof Error ? error.message : String(error)}`
-      );
+    if (typeof callback !== 'function') {
+      throw new DartsError('Failed to traverse: callback must be a function');
     }
+    checkKey(key);
+    wasmCore.withKey(key, (ptr, len) => {
+      let node = 0;
+      let pos = 0;
+      while (pos < len) {
+        const step = wasmCore.step(handleArg(handle), ptr, len, node, pos);
+        if (check(step.status) === Status.ERR_EMPTY_DICTIONARY) return;
+        const advanced = step.key !== pos;
+        node = step.node;
+        pos = step.key;
+        let proceed: boolean | undefined;
+        try {
+          proceed = callback({ node, key: pos, value: step.value });
+        } catch (error) {
+          throw new DartsError(`Failed to traverse: ${(error as Error).message}`);
+        }
+        if (proceed === false || step.value === -2 || !advanced) return;
+      }
+    });
   }
 
   /**
@@ -327,74 +227,69 @@ export class DartsNativeWrapper implements DartsNative {
    * @param backend backend kind to build with (defaults to 'darts')
    * @returns dictionary handle
    */
-  // eslint-disable-next-line class-methods-use-this
   build(keys: string[], values?: number[], backend?: Backend): number {
+    if (!Array.isArray(keys) || keys.length === 0) {
+      throw new BuildError('Empty keys array');
+    }
+    for (const key of keys) {
+      if (typeof key !== 'string') {
+        throw new BuildError('All keys must be strings');
+      }
+    }
+    let packedValues: Int32Array | undefined;
+    if (values !== undefined) {
+      if (!Array.isArray(values) || values.length !== keys.length) {
+        throw new BuildError('Values array length must match keys array length');
+      }
+      for (const value of values) {
+        if (typeof value !== 'number') {
+          throw new BuildError('All values must be numbers');
+        }
+        // Negative values collide with the -1 "not found" result.
+        if (!Number.isInteger(value) || value < 0 || value > INT32_MAX) {
+          throw new BuildError('All values must be non-negative 32-bit integers');
+        }
+      }
+      packedValues = Int32Array.from(values);
+    }
+    let code: number;
     try {
-      if (!Array.isArray(keys) || keys.length === 0) {
-        throw new BuildError('Empty keys array');
-      }
-
-      // Ensure keys are strings
-      keys.forEach((key) => {
-        if (typeof key !== 'string') {
-          throw new BuildError('All keys must be strings');
-        }
-      });
-
-      // Ensure values are numbers
-      if (values !== undefined) {
-        if (!Array.isArray(values) || values.length !== keys.length) {
-          throw new BuildError('Values array length must match keys array length');
-        }
-
-        values.forEach((value) => {
-          if (typeof value !== 'number') {
-            throw new BuildError('All values must be numbers');
-          }
-        });
-      }
-
-      const handle = native.build(keys, values, backend ?? defaultBackend);
-      if (handle === null || handle === undefined) {
-        throw new BuildError('Failed to build dictionary');
-      }
-      return handle;
+      code = backendCode(backend, defaultBackend);
     } catch (error) {
-      if (error instanceof DartsError) {
-        throw error;
-      }
-      throw new BuildError(error instanceof Error ? error.message : String(error));
+      throw new BuildError((error as Error).message);
+    }
+
+    const handle = wasmCore.build(
+      code,
+      keys.map((key) => encoder.encode(key)),
+      packedValues
+    );
+    if (handle >= 0) return handle;
+    switch (handle) {
+      case Status.ERR_NUL_IN_KEY:
+        throw new BuildError('All keys must not contain NUL characters');
+      case Status.ERR_NEGATIVE_VALUE:
+        throw new BuildError('All values must be non-negative 32-bit integers');
+      default:
+        throw new BuildError('Failed to build dictionary');
     }
   }
 
   /**
-   * Gets the size of the dictionary
+   * Gets the size of the dictionary: the number of units in its array, not
+   * the number of keys
    * @param handle dictionary handle
    * @returns size of the dictionary
    */
-  // eslint-disable-next-line class-methods-use-this
   size(handle: number): number {
-    try {
-      return native.size(handle);
-    } catch (error) {
-      throw new DartsError(
-        `Failed to get dictionary size: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    return check(wasmCore.size(handleArg(handle)));
   }
 
   /**
    * Returns the backend kind currently held by the handle.
    */
-  // eslint-disable-next-line class-methods-use-this
   getBackend(handle: number): Backend {
-    try {
-      return native.getBackend(handle);
-    } catch (error) {
-      throw new DartsError(
-        `Failed to get dictionary backend: ${error instanceof Error ? error.message : String(error)}`
-      );
-    }
+    return BACKEND_NAMES[check(wasmCore.backend(handleArg(handle)))];
   }
 }
 

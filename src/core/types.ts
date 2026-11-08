@@ -1,6 +1,7 @@
 /**
- * Backend kind: 'darts' selects the original taku910/darts library, 'clone'
- * selects s-yata/darts-clone. Both are linked into the native addon.
+ * Backend kind: 'darts' holds the dictionary in the taku910 Darts 0.32 layout,
+ * 'clone' in the darts-clone layout. Both are built into the WebAssembly core,
+ * and files are interchangeable with those written by the C++ libraries.
  */
 export type Backend = 'darts' | 'clone';
 
@@ -51,7 +52,7 @@ export interface LoadOptions {
 }
 
 /**
- * Interface for native module
+ * Interface for the core module
  * This interface is for internal implementation and is not intended to be used directly
  */
 export interface DartsNative {
@@ -61,6 +62,8 @@ export interface DartsNative {
   destroyDictionary(handle: number): void;
   /** Loads a dictionary file */
   loadDictionary(handle: number, filePath: string, backend?: Backend): boolean;
+  /** Loads a dictionary file without blocking while it is read */
+  loadDictionaryAsync(handle: number, filePath: string, backend?: Backend): Promise<boolean>;
   /** Saves a dictionary file */
   saveDictionary(handle: number, filePath: string): boolean;
   /** Performs an exact match search */

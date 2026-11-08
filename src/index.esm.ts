@@ -1,9 +1,9 @@
 /**
- * node-darts: Node.js Native Addon for Darts (Double-ARray Trie System)
- * ESM wrapper for the native module
+ * node-darts: Darts (Double-ARray Trie System) for Node.js, compiled to WebAssembly
+ * ESM entry point
  *
- * Re-exports the same surface as ./index. The native loader (with the Windows
- * CI fallback) lives in ./core/native and is shared by both entry points.
+ * Re-exports the same surface as ./index. The WebAssembly core is instantiated
+ * once in ./core/wasm and shared by both entry points.
  *
  * @packageDocumentation
  */

@@ -16,10 +16,9 @@
       "*.{js,cjs,mjs}",
       "!**/node_modules",
       "!dist",
-      "!lib",
-      "!build",
       "!coverage",
-      "!src/native/third_party"
+      "!src/generated",
+      "!target"
     ]
   },
   "formatter": {
@@ -90,7 +89,9 @@
         "noExplicitAny": "warn",
         "noConsole": {
           "level": "warn",
-          "options": { "allow": ["warn", "error", "info"] }
+          "options": {
+            "allow": ["warn", "error", "info"]
+          }
         },
         "noDoubleEquals": "error",
         "noEmptyBlockStatements": "error"

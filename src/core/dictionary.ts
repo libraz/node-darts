@@ -98,13 +98,8 @@ export default class Dictionary {
    * @throws {InvalidDictionaryError} if the dictionary file is invalid
    */
   public async load(filePath: string, options?: LoadOptions): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      try {
-        resolve(this.loadSync(filePath, options));
-      } catch (error) {
-        reject(error);
-      }
-    });
+    this.ensureNotDisposed();
+    return dartsNative.loadDictionaryAsync(this.handle, filePath, options?.backend);
   }
 
   /**

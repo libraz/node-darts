@@ -20,7 +20,7 @@ import type {
 
 // FinalizationRegistry for automatic resource cleanup
 const registry = new FinalizationRegistry((handle: number) => {
-  // Clean up native resources when object is garbage collected
+  // Release the core dictionary when the object is garbage collected
   if (handle !== undefined) {
     dartsNative.destroyDictionary(handle);
   }
