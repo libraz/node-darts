@@ -149,8 +149,11 @@ export default class Dictionary {
   public replaceWords(text: string, replacer: WordReplacer): string {
     this.ensureNotDisposed();
 
+    // Own keys only: an inherited name such as 'toString' is not a mapping.
     const replaceFn =
-      typeof replacer === 'function' ? replacer : (match: string) => replacer[match] ?? match;
+      typeof replacer === 'function'
+        ? replacer
+        : (match: string) => (Object.hasOwn(replacer, match) ? replacer[match] : match);
 
     let result = '';
     let position = 0;

@@ -10,7 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "sourceMap": true,
     "rootDir": "./src",
-    "lib": ["ES2021"],
+    "lib": ["ES2022"],
     "types": ["node", "vitest/globals"]
   },
   "include": ["src/**/*"],
