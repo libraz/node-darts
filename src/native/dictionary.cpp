@@ -141,6 +141,12 @@ Napi::Value ExactMatchSearch(const Napi::CallbackInfo& info) {
       return env.Null();
     }
 
+    // A dictionary with no trie (never loaded, or a failed load) has no root
+    // node; the backends dereference it unconditionally.
+    if (dict->Size() == 0) {
+      return Napi::Number::New(env, -1);
+    }
+
     int result = dict->ExactMatchSearch(key.c_str(), key.length());
     return Napi::Number::New(env, result);
   } catch (const std::exception& e) {
@@ -164,6 +170,10 @@ Napi::Value CommonPrefixSearch(const Napi::CallbackInfo& info) {
     if (!dict) {
       Napi::Error::New(env, "Invalid dictionary handle").ThrowAsJavaScriptException();
       return env.Null();
+    }
+
+    if (dict->Size() == 0) {
+      return Napi::Array::New(env, 0);
     }
 
     // Common-prefix matches are bounded by the key length plus one terminal
@@ -201,6 +211,10 @@ Napi::Value Traverse(const Napi::CallbackInfo& info) {
     if (!dict) {
       Napi::Error::New(env, "Invalid dictionary handle").ThrowAsJavaScriptException();
       return env.Null();
+    }
+
+    if (dict->Size() == 0) {
+      return env.Undefined();
     }
 
     std::size_t node_pos = 0;
