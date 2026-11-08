@@ -1,8 +1,11 @@
 #include "builder.h"
 
 #include <algorithm>
+#include <cmath>
+#include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "backend.h"
@@ -67,9 +70,25 @@ Napi::Value Build(const Napi::CallbackInfo& info) {
           Napi::TypeError::New(env, "All values must be numbers").ThrowAsJavaScriptException();
           return env.Null();
         }
-        v = value_val.As<Napi::Number>().Int32Value();
+        // Negative values collide with the -1 "not found" result, and both
+        // backends store int; reject instead of truncating or wrapping.
+        const double d = value_val.As<Napi::Number>().DoubleValue();
+        if (!(d >= 0 && d <= static_cast<double>(INT32_MAX)) || std::floor(d) != d) {
+          Napi::RangeError::New(env, "All values must be non-negative 32-bit integers")
+              .ThrowAsJavaScriptException();
+          return env.Null();
+        }
+        v = static_cast<int>(d);
       }
-      pairs.emplace_back(key_val.As<Napi::String>().Utf8Value(), v);
+      std::string key = key_val.As<Napi::String>().Utf8Value();
+      // Keys are handed to the backends NUL-terminated, so an embedded NUL
+      // would silently truncate the key.
+      if (key.find('\0') != std::string::npos) {
+        Napi::TypeError::New(env, "All keys must not contain NUL characters")
+            .ThrowAsJavaScriptException();
+        return env.Null();
+      }
+      pairs.emplace_back(std::move(key), v);
     }
 
     // Stable-sort by key so duplicate-key dedup keeps the first occurrence.

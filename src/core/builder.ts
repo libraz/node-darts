@@ -17,30 +17,8 @@ export default class Builder {
    * @throws {BuildError} if the build fails
    */
   // eslint-disable-next-line class-methods-use-this
-  public build(inputKeys: string[], inputValues?: number[], options?: BuildOptions): Dictionary {
-    Builder.validateInput(inputKeys, inputValues);
-
-    let keys = inputKeys;
-    let values = inputValues;
-
-    // Sort keys (and values, if provided) together so the native side receives
-    // properly aligned, dictionary-ordered input. The native build also sorts
-    // defensively, but doing it here keeps the JS path consistent.
-    if (!Builder.isSorted(keys)) {
-      const pairs = keys.map((key, index) => ({
-        key,
-        value: values ? values[index] : index,
-      }));
-
-      pairs.sort((a, b) => {
-        if (a.key < b.key) return -1;
-        if (a.key > b.key) return 1;
-        return 0;
-      });
-
-      keys = pairs.map((p) => p.key);
-      values = inputValues ? pairs.map((p) => p.value) : undefined;
-    }
+  public build(keys: string[], values?: number[], options?: BuildOptions): Dictionary {
+    Builder.validateInput(keys, values);
 
     // Build is synchronous; report progress at start and end so callers that
     // wire up a progressCallback observe deterministic 0/total and total/total.
@@ -48,6 +26,8 @@ export default class Builder {
     options?.progressCallback?.(0, total);
 
     try {
+      // Sorting and duplicate removal happen natively on (key, value) pairs,
+      // so an omitted value stays the key's index in the caller's array.
       const handle = dartsNative.build(keys, values, options?.backend);
       options?.progressCallback?.(total, total);
       return new Dictionary(handle);
@@ -135,20 +115,5 @@ export default class Builder {
         }
       });
     }
-  }
-
-  /**
-   * Checks if an array is sorted (using byte-wise comparison to match the
-   * native side's std::sort).
-   * @param arr array to check
-   * @returns true if sorted, false otherwise
-   */
-  private static isSorted(arr: string[]): boolean {
-    for (let i = 1; i < arr.length; i += 1) {
-      if (arr[i - 1] > arr[i]) {
-        return false;
-      }
-    }
-    return true;
   }
 }
