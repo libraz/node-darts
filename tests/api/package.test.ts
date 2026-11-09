@@ -31,7 +31,7 @@ describe('package.json', () => {
     expect(pkg.engines).toEqual({ node: '>=20.4.0' });
   });
 
-  it('publishes dist and the license files', () => {
-    expect(pkg.files).toEqual(['dist', 'LICENSE', 'NOTICE']);
+  it('publishes dist, the license files and the Japanese README', () => {
+    expect(pkg.files).toEqual(['dist', 'LICENSE', 'NOTICE', 'README_ja.md']);
   });
 });
