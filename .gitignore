@@ -56,3 +56,6 @@ agent.md
 # Upstream images recorded as test oracles
 !core/tests/fixtures/**/*.darts
 src/generated/
+
+# Local design notes and research
+backup/
