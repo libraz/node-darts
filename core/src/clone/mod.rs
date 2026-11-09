@@ -113,14 +113,15 @@ impl DoubleArray {
             .map_or(-1, value)
     }
 
-    /// Appends the values of every key that is a prefix of `key`, shortest first.
-    pub fn common_prefix_search(&self, key: &[u8], out: &mut Vec<i32>) {
+    /// Appends `(value, byte_length)` of every key that is a prefix of `key`,
+    /// shortest first.
+    pub fn common_prefix_search(&self, key: &[u8], out: &mut Vec<(i32, usize)>) {
         let mut node_pos = 0usize;
         let Some(root) = self.unit(node_pos) else {
             return;
         };
         node_pos ^= offset(root) as usize;
-        for &b in key {
+        for (i, &b) in key.iter().enumerate() {
             node_pos ^= usize::from(b);
             let Some(unit) = self.unit(node_pos) else {
                 return;
@@ -134,7 +135,7 @@ impl DoubleArray {
                 let Some(leaf) = self.unit(node_pos) else {
                     return;
                 };
-                out.push(value(leaf));
+                out.push((value(leaf), i + 1));
             }
         }
     }
@@ -191,6 +192,7 @@ mod tests {
         let mut out = Vec::new();
         loaded.common_prefix_search(b"key00001xyz", &mut out);
         assert_eq!(out.len(), 1);
+        assert_eq!(out[0].1, 8);
     }
 
     #[test]

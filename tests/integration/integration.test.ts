@@ -1,190 +1,85 @@
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import {
-  Builder,
-  buildAndSaveDictionary,
-  buildAndSaveDictionarySync,
-  buildDictionary,
-  createDictionary,
-  Dictionary,
-  loadDictionary,
-  type TraverseResult,
-} from '../../src';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { Dictionary } from '../../src';
 
 describe('Integration Tests', () => {
   let tempDir: string;
-  let dictPath: string;
 
   beforeAll(() => {
-    // Create a temporary directory for testing
-    tempDir = path.join(os.tmpdir(), `node-darts-test-${Date.now()}`);
-    fs.mkdirSync(tempDir, { recursive: true });
-
-    // Path to the test dictionary file
-    dictPath = path.join(tempDir, 'integration-test.darts');
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'node-darts-integration-'));
   });
 
   afterAll(() => {
-    // Remove the temporary test directory
-    if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
-    }
+    fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  describe('Dictionary and Builder integration', () => {
-    it('should build, save, and load a dictionary', () => {
-      // Build a dictionary
-      const builder = new Builder();
-      const keys = ['apple', 'banana', 'orange', 'pineapple', 'strawberry'];
-      const values = [100, 200, 300, 400, 500];
+  describe('build, save and load', () => {
+    const entries: [string, number][] = [
+      ['apple', 100],
+      ['banana', 200],
+      ['orange', 300],
+      ['pineapple', 400],
+      ['strawberry', 500],
+    ];
 
-      // Build and save the dictionary
-      const result = builder.buildAndSaveSync(keys, dictPath, values);
-      expect(result).toBe(true);
+    it('round-trips a dictionary through a file', () => {
+      const file = path.join(tempDir, 'integration.darts');
+      Dictionary.build(entries).saveSync(file);
 
-      // Load the dictionary
-      const dict = new Dictionary();
-      dict.loadSync(dictPath);
-
-      // Exact match search
-      expect(dict.exactMatchSearch('apple')).toBe(100);
-      expect(dict.exactMatchSearch('banana')).toBe(200);
-      expect(dict.exactMatchSearch('orange')).toBe(300);
-      expect(dict.exactMatchSearch('pineapple')).toBe(400);
-      expect(dict.exactMatchSearch('strawberry')).toBe(500);
-      expect(dict.exactMatchSearch('grape')).toBe(-1);
-
-      // Common prefix search
-      const results = dict.commonPrefixSearch('pineapple');
-      // Note: In the actual implementation, searching for 'apple' within 'pine' is not performed
-      // Common prefix search only matches when the search key is a prefix of a key in the dictionary
-      expect(results).toContain(400); // 'pineapple'
-
-      // Release resources
-      dict.dispose();
-    });
-  });
-
-  describe('Helper functions', () => {
-    it('should create a dictionary with createDictionary', () => {
-      const dict = createDictionary();
-      expect(dict).toBeInstanceOf(Dictionary);
-      dict.dispose();
-    });
-
-    it('should build a dictionary with buildDictionary', () => {
-      const keys = ['apple', 'banana', 'orange'];
-      const values = [100, 200, 300];
-
-      const dict = buildDictionary(keys, values);
-      expect(dict).toBeInstanceOf(Dictionary);
-
-      expect(dict.exactMatchSearch('apple')).toBe(100);
-      expect(dict.exactMatchSearch('banana')).toBe(200);
-      expect(dict.exactMatchSearch('orange')).toBe(300);
-
-      dict.dispose();
-    });
-
-    it('should build and save a dictionary with buildAndSaveDictionarySync', () => {
-      const keys = ['apple', 'banana', 'orange'];
-      const syncDictPath = path.join(tempDir, 'sync-helper-test.darts');
-
-      const result = buildAndSaveDictionarySync(keys, syncDictPath);
-      expect(result).toBe(true);
-
-      // Verify that the file was created
-      expect(fs.existsSync(syncDictPath)).toBe(true);
-
-      // Verify that the created file can be loaded
-      const dict = loadDictionary(syncDictPath);
-
-      expect(dict.exactMatchSearch('apple')).toBe(0);
-      expect(dict.exactMatchSearch('banana')).toBe(1);
-      expect(dict.exactMatchSearch('orange')).toBe(2);
-
-      dict.dispose();
-    });
-
-    it('should build and save a dictionary with buildAndSaveDictionary', async () => {
-      const keys = ['apple', 'banana', 'orange'];
-      const asyncDictPath = path.join(tempDir, 'async-helper-test.darts');
-
-      const result = await buildAndSaveDictionary(keys, asyncDictPath);
-      expect(result).toBe(true);
-
-      // Verify that the file was created
-      expect(fs.existsSync(asyncDictPath)).toBe(true);
-
-      // Verify that the created file can be loaded
-      const dict = loadDictionary(asyncDictPath);
-
-      expect(dict.exactMatchSearch('apple')).toBe(0);
-      expect(dict.exactMatchSearch('banana')).toBe(1);
-      expect(dict.exactMatchSearch('orange')).toBe(2);
-
-      dict.dispose();
-    });
-  });
-
-  describe('Memory management', () => {
-    it('should handle multiple dictionary instances', () => {
-      // Create multiple dictionary instances
-      const dicts: Dictionary[] = [];
-      for (let i = 0; i < 10; i += 1) {
-        dicts.push(createDictionary());
+      using dict = Dictionary.loadSync(file);
+      for (const [key, value] of entries) {
+        expect(dict.exactMatchSearch(key)).toBe(value);
       }
+      expect(dict.exactMatchSearch('grape')).toBeUndefined();
+      expect(dict.commonPrefixSearch('pineapple')).toEqual([{ value: 400, length: 9 }]);
+    });
 
-      // Release all dictionaries
-      dicts.forEach((dict) => {
-        dict.dispose();
-      });
+    it('assigns input-order indices to a key-only build and keeps them after save', async () => {
+      const file = path.join(tempDir, 'indices.darts');
+      await Dictionary.build(['apple', 'banana', 'orange']).save(file);
+      expect(fs.existsSync(file)).toBe(true);
 
-      // Verify that a new dictionary can be created
-      const newDict = createDictionary();
-      expect(newDict).toBeInstanceOf(Dictionary);
-      newDict.dispose();
+      using dict = await Dictionary.load(file);
+      expect(['apple', 'banana', 'orange'].map((k) => dict.exactMatchSearch(k))).toEqual([0, 1, 2]);
+    });
+
+    it('rebuilds an identical image from toBytes', () => {
+      using a = Dictionary.build(entries);
+      using b = Dictionary.fromBytes(a.toBytes());
+      expect(b.toBytes()).toEqual(a.toBytes());
+      expect(b.byteLength).toBe(a.byteLength);
     });
   });
 
-  describe('Traverse functionality', () => {
-    it('should traverse the trie structure', () => {
-      // Build a dictionary
-      const keys = ['apple', 'application', 'banana', 'orange', 'pineapple'];
-      const values = [100, 101, 200, 300, 400];
+  describe('memory management', () => {
+    it('creates and disposes many instances', () => {
+      const dicts = Array.from({ length: 10 }, (_v, i) => Dictionary.build([`key${i}`]));
+      for (const dict of dicts) dict.dispose();
+      using fresh = Dictionary.build(['fresh']);
+      expect(fresh.disposed).toBe(false);
+      expect(fresh.exactMatchSearch('fresh')).toBe(0);
+    });
+  });
 
-      const dict = buildDictionary(keys, values);
+  describe('traverse', () => {
+    it('walks a key and reports where it is stored', () => {
+      using dict = Dictionary.build([
+        ['apple', 100],
+        ['application', 101],
+        ['banana', 200],
+        ['orange', 300],
+        ['pineapple', 400],
+      ]);
+      const steps = dict.traverse('apple');
+      expect(steps).toHaveLength('apple'.length);
+      expect(steps.at(-1)).toEqual({ length: 5, value: 100 });
 
-      // Array to store traverse results
-      const traverseResults: TraverseResult[] = [];
-
-      // Execute traverse
-      dict.traverse('apple', (result) => {
-        traverseResults.push({ ...result });
-        return true; // Continue processing
-      });
-
-      // Verify results: traverse fires once per character of the key.
-      expect(traverseResults.length).toBe('apple'.length);
-
-      // The last result should indicate an exact match.
-      const lastResult = traverseResults[traverseResults.length - 1];
-      expect(lastResult.key).toBe('apple'.length);
-      expect(lastResult.value).toBe(100); // Value of 'apple'
-
-      // Test interrupting the process midway after the third character.
-      const limitedResults: TraverseResult[] = [];
-
-      dict.traverse('application', (result) => {
-        limitedResults.push({ ...result });
-        return limitedResults.length < 3;
-      });
-
-      // Should have stopped exactly when the callback returned false.
-      expect(limitedResults.length).toBe(3);
-
-      dict.dispose();
+      const toward = dict.traverse('application');
+      expect(toward).toHaveLength('application'.length);
+      expect(toward.at(-1)).toEqual({ length: 11, value: 101 });
+      expect(toward[4]).toEqual({ length: 5, value: undefined });
     });
   });
 });

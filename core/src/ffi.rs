@@ -3,9 +3,14 @@
 //! Dictionaries live in a handle table; a freed slot is reused by the next
 //! allocation. Every entry point returns an `i32`: a non-negative result
 //! (handle, length, count or [`OK`]) or one of the negative `ERR_*` codes,
-//! which `src/core/wasm.ts` mirrors. Scalar results are written to a fixed
+//! which the JavaScript binding mirrors. Scalar results are written to a fixed
 //! scratch area ([`darts_scratch_ptr`]) and variable-length results to an
 //! output buffer ([`darts_out_ptr`]) that the next call may move.
+//!
+//! Result layouts: [`darts_prefix`] returns the match count `n` and writes
+//! `[value, byte_len]` `i32` pairs (`2n` of them); [`darts_build`] failing with
+//! [`ERR_BUILD_FAILED`] writes the UTF-8 reason to the output buffer and its
+//! byte length to scratch slot 0.
 //!
 //! The JavaScript side owns narrowing: it converts numbers to `i32` with
 //! range and integrality checks before they cross this boundary.
@@ -88,10 +93,19 @@ impl State {
         (self.dictionaries.len() - 1) as i32
     }
 
-    fn emit_i32s(&mut self, values: &[i32]) -> i32 {
+    fn emit_matches(&mut self, matches: &[(i32, usize)]) -> i32 {
         self.out.clear();
-        self.out.extend(values.iter().flat_map(|v| v.to_le_bytes()));
-        values.len() as i32
+        for &(value, len) in matches {
+            self.out.extend(value.to_le_bytes());
+            self.out.extend((len as i32).to_le_bytes());
+        }
+        matches.len() as i32
+    }
+
+    fn emit_reason(&mut self, reason: &str) {
+        self.out.clear();
+        self.out.extend_from_slice(reason.as_bytes());
+        set_scratch([reason.len() as i32, 0, 0]);
     }
 }
 
@@ -215,7 +229,19 @@ pub unsafe extern "C" fn darts_build(
     let values = (!values.is_null()).then(|| unsafe { std::slice::from_raw_parts(values, count) });
     match Dictionary::build(b, &split, values) {
         Ok(dict) => state().insert(dict),
-        Err(e) => status(&e),
+        Err(e) => {
+            let code = status(&e);
+            if code == ERR_BUILD_FAILED {
+                // JS passes equal-length arrays, so a mismatch cannot occur.
+                debug_assert!(e != Error::LengthMismatch, "length mismatch from JS");
+                let reason = match e {
+                    Error::BuildFailed(reason) => reason,
+                    _ => "",
+                };
+                state().emit_reason(reason);
+            }
+            code
+        }
     }
 }
 
@@ -282,8 +308,8 @@ pub unsafe extern "C" fn darts_exact(handle: u32, key: *const u8, len: usize) ->
     OK
 }
 
-/// Common-prefix search; the values go to the output buffer as `i32`s and
-/// their count is returned.
+/// Common-prefix search; returns the match count `n`, and the output buffer
+/// holds `[value, byte_len]` `i32` pairs for the matches, shortest first.
 ///
 /// # Safety
 /// `key` must be valid for `len` bytes.
@@ -295,7 +321,7 @@ pub unsafe extern "C" fn darts_prefix(handle: u32, key: *const u8, len: usize) -
     };
     // SAFETY: guaranteed by the caller.
     let found = dict.common_prefix_search(unsafe { bytes(key, len) });
-    state.emit_i32s(&found)
+    state.emit_matches(&found)
 }
 
 /// Advances one byte along `key`; scratch receives `[value, node_pos,
@@ -323,5 +349,48 @@ pub unsafe extern "C" fn darts_traverse_step(
             OK
         }
         None => ERR_EMPTY_DICTIONARY,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn out_bytes() -> Vec<u8> {
+        let len = SCRATCH.lock().unwrap()[0] as usize;
+        state().out[..len].to_vec()
+    }
+
+    #[test]
+    fn build_failure_reports_reason_and_prefix_emits_pairs() {
+        let keys = b"";
+        let lengths = [0u32];
+        // SAFETY: one zero-length key; `keys` is never read.
+        let code = unsafe { darts_build(1, keys.as_ptr(), lengths.as_ptr(), 1, std::ptr::null()) };
+        assert_eq!(code, ERR_BUILD_FAILED);
+        assert_eq!(
+            String::from_utf8(out_bytes()).unwrap(),
+            "failed to insert key: zero-length key"
+        );
+
+        let packed = b"aab";
+        let lengths = [1u32, 2];
+        // SAFETY: `packed` holds 1 + 2 bytes for two keys.
+        let handle =
+            unsafe { darts_build(0, packed.as_ptr(), lengths.as_ptr(), 2, std::ptr::null()) };
+        assert!(handle >= 0);
+        let query = b"abx";
+        // SAFETY: `query` is valid for its length.
+        let n = unsafe { darts_prefix(handle as u32, query.as_ptr(), query.len()) };
+        assert_eq!(n, 2);
+        let out = state().out.clone();
+        let pairs: Vec<i32> = out
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|c| i32::from_le_bytes(*c))
+            .collect();
+        assert_eq!(pairs, [0, 1, 1, 2]);
+        assert_eq!(darts_destroy(handle as u32), OK);
     }
 }

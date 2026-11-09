@@ -1,31 +1,27 @@
 /**
- * Backend switching tests for the two double-array layouts.
+ * Backend switching for the two double-array layouts.
  *
  * Verifies:
- *  - both backends build and search correctly
- *  - explicit { backend } option is honoured by build, load, and createDictionary
- *  - load auto-detect picks darts-clone first and falls back to taku910/darts
- *  - getBackend() reports the kind currently held by a dict
- *  - cross-backend on-disk format incompatibility is detected (clone rejects
- *    a taku910 file when explicitly told to use clone, and vice versa)
+ *  - both backends build and search identically
+ *  - an explicit { backend } is honoured by build, load, loadSync and fromBytes
+ *  - load auto-detect picks darts-clone first and falls back to Darts 0.32
+ *  - `backend` reports the layout a dictionary holds
+ *  - a file of the other layout is rejected when its backend is forced
  */
 
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Backend, Dictionary } from '../../src';
-import {
-  buildAndSaveDictionarySync,
-  buildDictionary,
-  createDictionary,
-  InvalidDictionaryError,
-  loadDictionary,
-  TextDarts,
-} from '../../src';
+import { type Backend, Dictionary, InvalidDictionaryError } from '../../src';
 
-const KEYS = ['apple', 'banana', 'orange', 'pineapple', 'strawberry'];
-const VALUES = [1, 2, 3, 4, 5];
+const ENTRIES: [string, number][] = [
+  ['apple', 1],
+  ['banana', 2],
+  ['orange', 3],
+  ['pineapple', 4],
+  ['strawberry', 5],
+];
 
 describe.each<Backend>(['darts', 'clone'])('backend=%s', (backend) => {
   let tempDir: string;
@@ -40,47 +36,47 @@ describe.each<Backend>(['darts', 'clone'])('backend=%s', (backend) => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it('builds + searches with explicit backend', () => {
-    const dict = buildDictionary(KEYS, VALUES, { backend });
-    expect(dict.getBackend()).toBe(backend);
+  it('builds and searches with an explicit backend', () => {
+    using dict = Dictionary.build(ENTRIES, { backend });
+    expect(dict.backend).toBe(backend);
     expect(dict.exactMatchSearch('apple')).toBe(1);
-    expect(dict.exactMatchSearch('grape')).toBe(-1);
-    expect(dict.commonPrefixSearch('pineapple')).toEqual([4]);
-    dict.dispose();
+    expect(dict.exactMatchSearch('grape')).toBeUndefined();
+    expect(dict.commonPrefixSearch('pineapple')).toEqual([{ value: 4, length: 9 }]);
   });
 
-  it('build + save + auto-detect reload preserves backend', () => {
-    const ok = buildAndSaveDictionarySync(KEYS, dictFile, VALUES, { backend });
-    expect(ok).toBe(true);
+  it('save then auto-detect reload preserves the backend', () => {
+    using built = Dictionary.build(ENTRIES, { backend });
+    built.saveSync(dictFile);
 
-    const reloaded = loadDictionary(dictFile);
-    expect(reloaded.getBackend()).toBe(backend);
+    using reloaded = Dictionary.loadSync(dictFile);
+    expect(reloaded.backend).toBe(backend);
     expect(reloaded.exactMatchSearch('strawberry')).toBe(5);
-    reloaded.dispose();
   });
 
-  it('explicit backend on load matches saved format', () => {
-    const dict = loadDictionary(dictFile, { backend });
-    expect(dict.getBackend()).toBe(backend);
+  it.each([
+    ['load', (f: string) => Dictionary.load(f, { backend })],
+    ['loadSync', (f: string) => Dictionary.loadSync(f, { backend })],
+    ['fromBytes', (f: string) => Dictionary.fromBytes(fs.readFileSync(f), { backend })],
+  ])('an explicit backend on %s matches the saved format', async (_name, open) => {
+    using built = Dictionary.build(ENTRIES, { backend });
+    built.saveSync(dictFile);
+    using dict = await open(dictFile);
+    expect(dict.backend).toBe(backend);
     expect(dict.exactMatchSearch('banana')).toBe(2);
-    dict.dispose();
   });
 
-  it('createDictionary honours backend kind', () => {
-    const dict = createDictionary(backend);
-    expect(dict.getBackend()).toBe(backend);
-    dict.dispose();
-  });
-
-  it('TextDarts.build + load roundtrip with explicit backend', () => {
-    const td = TextDarts.build(KEYS, VALUES, { backend });
-    expect(td.getBackend()).toBe(backend);
-    expect(td.exactMatchSearch('orange')).toBe(3);
-    td.dispose();
-
-    const loaded = TextDarts.load(dictFile, { backend });
-    expect(loaded.getBackend()).toBe(backend);
-    loaded.dispose();
+  it('gives the same search results as the other backend', () => {
+    const other: Backend = backend === 'darts' ? 'clone' : 'darts';
+    using a = Dictionary.build(ENTRIES, { backend });
+    using b = Dictionary.build(ENTRIES, { backend: other });
+    for (const text of ['apple', 'pineapples', 'straw', 'banana!', 'zzz', '']) {
+      expect(a.exactMatchSearch(text)).toBe(b.exactMatchSearch(text));
+      expect(a.commonPrefixSearch(text)).toEqual(b.commonPrefixSearch(text));
+      expect(a.traverse(text)).toEqual(b.traverse(text));
+    }
+    expect(a.replaceWords('apple pie', (w, v) => `${w}${v}`)).toBe(
+      b.replaceWords('apple pie', (w, v) => `${w}${v}`)
+    );
   });
 });
 
@@ -91,47 +87,37 @@ describe('cross-backend on-disk format incompatibility', () => {
 
   beforeAll(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'node-darts-cross-'));
-    dartsFile = path.join(tempDir, 'taku910.darts');
+    dartsFile = path.join(tempDir, 'darts.darts');
     cloneFile = path.join(tempDir, 'clone.darts');
-    buildAndSaveDictionarySync(KEYS, dartsFile, VALUES, { backend: 'darts' });
-    buildAndSaveDictionarySync(KEYS, cloneFile, VALUES, { backend: 'clone' });
+    Dictionary.build(ENTRIES, { backend: 'darts' }).saveSync(dartsFile);
+    Dictionary.build(ENTRIES, { backend: 'clone' }).saveSync(cloneFile);
   });
 
   afterAll(() => {
     fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it('darts-clone refuses to load a taku910 dictionary file', () => {
-    expect(() => loadDictionary(dartsFile, { backend: 'clone' })).toThrow(InvalidDictionaryError);
+  it('darts-clone refuses a Darts 0.32 file', () => {
+    expect(() => Dictionary.loadSync(dartsFile, { backend: 'clone' })).toThrow(
+      InvalidDictionaryError
+    );
   });
 
-  it('taku910 backend forced on a clone file does not match keys', () => {
-    // taku910 may "open" a clone file (no strict validation) but its internal
-    // double-array structure is incompatible, so searches should not return
-    // the original values.
-    let dict: Dictionary;
-    try {
-      dict = loadDictionary(cloneFile, { backend: 'darts' });
-    } catch {
-      // If taku910 happens to reject the file, that's also acceptable.
-      return;
-    }
-    expect(dict.getBackend()).toBe('darts');
-    expect(dict.exactMatchSearch('apple')).not.toBe(1);
-    dict.dispose();
+  it('Darts 0.32 refuses a darts-clone file', () => {
+    expect(() => Dictionary.loadSync(cloneFile, { backend: 'darts' })).toThrow(
+      InvalidDictionaryError
+    );
   });
 
   it('auto-detect picks darts-clone for a clone file', () => {
-    const dict = loadDictionary(cloneFile);
-    expect(dict.getBackend()).toBe('clone');
+    using dict = Dictionary.loadSync(cloneFile);
+    expect(dict.backend).toBe('clone');
     expect(dict.exactMatchSearch('apple')).toBe(1);
-    dict.dispose();
   });
 
-  it('auto-detect falls back to taku910 for a taku910 file', () => {
-    const dict = loadDictionary(dartsFile);
-    expect(dict.getBackend()).toBe('darts');
+  it('auto-detect falls back to Darts 0.32 for a Darts file', () => {
+    using dict = Dictionary.loadSync(dartsFile);
+    expect(dict.backend).toBe('darts');
     expect(dict.exactMatchSearch('apple')).toBe(1);
-    dict.dispose();
   });
 });

@@ -75,12 +75,17 @@ fn check_backend(wanted: &str) {
                     case["exact"][i].as_i64().unwrap(),
                     "{ctx}: exact"
                 );
-                let prefix: Vec<i64> = dict
-                    .common_prefix_search(&query)
-                    .into_iter()
-                    .map(i64::from)
-                    .collect();
+                let matches = dict.common_prefix_search(&query);
+                let prefix: Vec<i64> = matches.iter().map(|&(v, _)| i64::from(v)).collect();
                 assert_eq!(prefix, ints(&case["prefix"][i]), "{ctx}: prefix");
+                for &(value, len) in &matches {
+                    assert!(len > 0 && len <= query.len(), "{ctx}: length {len}");
+                    assert_eq!(
+                        dict.exact_match_search(&query[..len]),
+                        value,
+                        "{ctx}: exact of prefix length {len}"
+                    );
+                }
                 let mut steps = Vec::new();
                 dict.traverse(
                     &query,
@@ -126,11 +131,12 @@ fn load_detection_matches_upstream() {
         let requested = load["backend"].as_str().map(backend);
         let result = Dictionary::load(&image, requested);
         let ctx = format!("{file} with {requested:?}");
-        assert_eq!(
-            result.is_ok(),
-            load["ok"].as_bool().unwrap(),
-            "{ctx}: accepted"
-        );
+        // Documented divergence: upstream Darts accepted any byte string, so
+        // its recorded acceptance of the non-dictionary blobs as a darts
+        // image no longer holds; every real dictionary image is unchanged.
+        let upstream_ok = load["ok"].as_bool().unwrap();
+        let expected_ok = upstream_ok && !(file.starts_with("blob_") && load["kind"] == "darts");
+        assert_eq!(result.is_ok(), expected_ok, "{ctx}: accepted");
         if let Ok(dict) = result {
             assert_eq!(
                 dict.backend(),
@@ -150,4 +156,73 @@ fn load_detection_matches_upstream() {
             }
         }
     }
+}
+
+const NONE: [(i32, usize); 0] = [];
+
+fn built(backend: Backend, keys: &[&[u8]]) -> Dictionary {
+    Dictionary::build(backend, keys, None).unwrap()
+}
+
+fn traversed(dict: &Dictionary, key: &[u8]) -> Vec<(i32, usize)> {
+    let mut steps = Vec::new();
+    dict.traverse(key, |s| {
+        steps.push((s.value, s.key_pos));
+        true
+    });
+    steps
+}
+
+#[test]
+fn nul_in_search_input() {
+    for b in [Backend::Darts, Backend::Clone] {
+        let dict = built(b, &[b"a", b"ab"]);
+        assert_eq!(dict.exact_match_search(b"a\0"), -1, "{b:?}");
+        assert_eq!(dict.exact_match_search(b"a\0b"), -1, "{b:?}");
+        assert_eq!(dict.exact_match_search(b"\0"), -1, "{b:?}");
+        assert_eq!(dict.common_prefix_search(b"a\0b"), [(0, 1)], "{b:?}");
+        assert_eq!(
+            dict.common_prefix_search(b"ab\0zz"),
+            dict.common_prefix_search(b"ab"),
+            "{b:?}"
+        );
+        assert_eq!(dict.common_prefix_search(b"\0a"), NONE, "{b:?}");
+        assert_eq!(traversed(&dict, b"ab\0b"), traversed(&dict, b"ab"), "{b:?}");
+        assert_eq!(traversed(&dict, b"ab\0b").len(), 2, "{b:?}");
+        assert_eq!(traversed(&dict, b"\0ab"), NONE, "{b:?}");
+    }
+}
+
+#[test]
+fn darts_load_rejections() {
+    let good = built(Backend::Darts, &[b"a"]).to_bytes().unwrap();
+    assert!(Dictionary::load(&good, Some(Backend::Darts)).is_ok());
+    assert!(Dictionary::load(&[], Some(Backend::Darts)).is_err());
+    assert!(Dictionary::load(&[], None).is_err());
+    assert!(Dictionary::load(&good[..good.len() - 4], Some(Backend::Darts)).is_err());
+    assert!(Dictionary::load(&good[..7], Some(Backend::Darts)).is_err());
+    let mut bad_base = good.clone();
+    bad_base[0] = 2;
+    assert!(Dictionary::load(&bad_base, Some(Backend::Darts)).is_err());
+    assert!(Dictionary::load(&[0; 2048], Some(Backend::Darts)).is_err());
+    assert!(Dictionary::load(b"not a dictionary", None).is_err());
+}
+
+#[test]
+fn empty_key_only_found_by_exact() {
+    let dict = built(Backend::Darts, &[b"", b"a"]);
+    assert_eq!(dict.exact_match_search(b""), 0);
+    assert_eq!(dict.exact_match_search(b"a"), 1);
+    assert_eq!(dict.common_prefix_search(b"a"), [(1, 1)]);
+    assert_eq!(dict.common_prefix_search(b"b"), NONE);
+    assert_eq!(dict.common_prefix_search(b""), NONE);
+    assert_eq!(traversed(&dict, b"a"), [(1, 1)]);
+    assert_eq!(traversed(&dict, b""), NONE);
+    let only_empty = built(Backend::Darts, &[b""]);
+    assert_eq!(only_empty.exact_match_search(b""), 0);
+    assert_eq!(only_empty.common_prefix_search(b"a"), NONE);
+    assert!(
+        Dictionary::build(Backend::Clone, &[b""], None).is_err(),
+        "clone rejects zero-length keys"
+    );
 }

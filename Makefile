@@ -15,8 +15,8 @@ test-rust:
 
 # The JS suite runs once per backend; it needs src/generated from `make wasm`.
 test-js:
-	NODE_DARTS_DEFAULT_BACKEND=clone yarn test
-	NODE_DARTS_DEFAULT_BACKEND=darts yarn test
+	NODE_DARTS_TEST_BACKEND=clone yarn test
+	NODE_DARTS_TEST_BACKEND=darts yarn test
 
 format:
 	cargo fmt --all

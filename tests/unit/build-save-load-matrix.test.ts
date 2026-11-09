@@ -1,22 +1,15 @@
 /**
  * Build -> save -> load -> search matrix. The rows are a pairwise covering
  * array over the build/load dimensions (backend, values, key order,
- * duplicates, charset, load mode, entry API, empty key); the empty key is
- * only generated for the darts backend because clone rejects it.
+ * duplicates, charset, load mode, persistence path, empty key); the empty key
+ * is only generated for the darts backend because clone rejects it.
  */
 
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Backend } from '../../src';
-import {
-  Builder,
-  buildAndSaveDictionary,
-  buildAndSaveDictionarySync,
-  loadDictionary,
-  TextDarts,
-} from '../../src';
+import { type Backend, Dictionary } from '../../src';
 
 type Row = {
   backend: Backend;
@@ -25,7 +18,7 @@ type Row = {
   duplicates: 'none' | 'some';
   charset: 'ascii' | 'japanese' | 'emoji' | 'mixed';
   loadMode: 'auto' | 'explicit';
-  api: 'fnSync' | 'fnAsync' | 'builderSync' | 'textDartsSync';
+  api: 'saveSync' | 'save' | 'bytes' | 'bytesBuffer';
   emptyKey: 'no' | 'yes';
 };
 
@@ -44,25 +37,25 @@ const COLUMNS = [
 const TABLE: ReadonlyArray<
   readonly [string, string, string, string, string, string, string, string]
 > = [
-  ['darts', 'omitted', 'shuffled', 'none', 'emoji', 'auto', 'textDartsSync', 'no'],
-  ['clone', 'explicit', 'sorted', 'none', 'ascii', 'explicit', 'fnSync', 'no'],
-  ['darts', 'omitted', 'reverse', 'some', 'mixed', 'explicit', 'fnAsync', 'no'],
-  ['darts', 'explicit', 'reverse', 'some', 'japanese', 'auto', 'fnSync', 'yes'],
-  ['clone', 'omitted', 'sorted', 'some', 'ascii', 'auto', 'builderSync', 'no'],
-  ['clone', 'explicit', 'shuffled', 'none', 'japanese', 'explicit', 'fnAsync', 'no'],
-  ['darts', 'explicit', 'shuffled', 'none', 'mixed', 'explicit', 'builderSync', 'yes'],
-  ['clone', 'omitted', 'shuffled', 'some', 'mixed', 'auto', 'fnSync', 'no'],
-  ['darts', 'explicit', 'reverse', 'none', 'emoji', 'explicit', 'textDartsSync', 'yes'],
-  ['darts', 'omitted', 'sorted', 'some', 'ascii', 'auto', 'fnAsync', 'yes'],
-  ['darts', 'explicit', 'shuffled', 'some', 'ascii', 'explicit', 'textDartsSync', 'yes'],
-  ['darts', 'explicit', 'sorted', 'none', 'mixed', 'auto', 'textDartsSync', 'yes'],
-  ['darts', 'omitted', 'sorted', 'some', 'japanese', 'auto', 'textDartsSync', 'yes'],
-  ['darts', 'omitted', 'sorted', 'none', 'japanese', 'auto', 'builderSync', 'yes'],
-  ['clone', 'explicit', 'reverse', 'some', 'emoji', 'explicit', 'builderSync', 'no'],
-  ['darts', 'omitted', 'sorted', 'some', 'emoji', 'auto', 'fnSync', 'yes'],
-  ['clone', 'explicit', 'sorted', 'none', 'emoji', 'explicit', 'fnAsync', 'no'],
-  ['clone', 'omitted', 'reverse', 'some', 'ascii', 'auto', 'builderSync', 'no'],
-  ['clone', 'omitted', 'shuffled', 'some', 'emoji', 'auto', 'textDartsSync', 'no'],
+  ['darts', 'omitted', 'shuffled', 'none', 'emoji', 'auto', 'bytesBuffer', 'no'],
+  ['clone', 'explicit', 'sorted', 'none', 'ascii', 'explicit', 'saveSync', 'no'],
+  ['darts', 'omitted', 'reverse', 'some', 'mixed', 'explicit', 'save', 'no'],
+  ['darts', 'explicit', 'reverse', 'some', 'japanese', 'auto', 'saveSync', 'yes'],
+  ['clone', 'omitted', 'sorted', 'some', 'ascii', 'auto', 'bytes', 'no'],
+  ['clone', 'explicit', 'shuffled', 'none', 'japanese', 'explicit', 'save', 'no'],
+  ['darts', 'explicit', 'shuffled', 'none', 'mixed', 'explicit', 'bytes', 'yes'],
+  ['clone', 'omitted', 'shuffled', 'some', 'mixed', 'auto', 'saveSync', 'no'],
+  ['darts', 'explicit', 'reverse', 'none', 'emoji', 'explicit', 'bytesBuffer', 'yes'],
+  ['darts', 'omitted', 'sorted', 'some', 'ascii', 'auto', 'save', 'yes'],
+  ['darts', 'explicit', 'shuffled', 'some', 'ascii', 'explicit', 'bytesBuffer', 'yes'],
+  ['darts', 'explicit', 'sorted', 'none', 'mixed', 'auto', 'bytesBuffer', 'yes'],
+  ['darts', 'omitted', 'sorted', 'some', 'japanese', 'auto', 'bytesBuffer', 'yes'],
+  ['darts', 'omitted', 'sorted', 'none', 'japanese', 'auto', 'bytes', 'yes'],
+  ['clone', 'explicit', 'reverse', 'some', 'emoji', 'explicit', 'bytes', 'no'],
+  ['darts', 'omitted', 'sorted', 'some', 'emoji', 'auto', 'saveSync', 'yes'],
+  ['clone', 'explicit', 'sorted', 'none', 'emoji', 'explicit', 'save', 'no'],
+  ['clone', 'omitted', 'reverse', 'some', 'ascii', 'auto', 'bytes', 'no'],
+  ['clone', 'omitted', 'shuffled', 'some', 'emoji', 'auto', 'bytesBuffer', 'no'],
 ];
 
 const ROWS: Row[] = TABLE.map(
@@ -150,47 +143,57 @@ describe('build -> save -> load -> search matrix', () => {
         const file = path.join(tempDir, `row-${row.id}.darts`);
         const options = { backend: row.backend };
 
-        let ok: boolean;
-        switch (row.api) {
-          case 'fnSync':
-            ok = buildAndSaveDictionarySync(keys, file, values, options);
-            break;
-          case 'fnAsync':
-            ok = await buildAndSaveDictionary(keys, file, values, options);
-            break;
-          case 'builderSync':
-            ok = new Builder().buildAndSaveSync(keys, file, values, options);
-            break;
-          default:
-            ok = TextDarts.buildAndSaveSync(keys, file, values, options);
-        }
-        expect(ok).toBe(true);
-        expect(fs.statSync(file).size).toBeGreaterThan(0);
-
-        const dict = loadDictionary(
-          file,
-          row.loadMode === 'explicit' ? { backend: row.backend } : undefined
+        const built = Dictionary.build(
+          values ? keys.map((k, i) => [k, values[i]] as const) : keys,
+          options
         );
+        let dict: Dictionary;
         try {
-          expect(dict.getBackend()).toBe(row.backend);
+          expect(built.backend).toBe(row.backend);
+          const loadOptions = row.loadMode === 'explicit' ? options : undefined;
+          switch (row.api) {
+            case 'saveSync':
+              built.saveSync(file);
+              dict = Dictionary.loadSync(file, loadOptions);
+              break;
+            case 'save':
+              await built.save(file);
+              dict = await Dictionary.load(file, loadOptions);
+              break;
+            case 'bytes':
+              dict = Dictionary.fromBytes(built.toBytes(), loadOptions);
+              break;
+            default:
+              dict = Dictionary.fromBytes(Buffer.from(built.toBytes()), loadOptions);
+          }
+        } finally {
+          built.dispose();
+        }
+        if (row.api === 'saveSync' || row.api === 'save') {
+          expect(fs.statSync(file).size).toBeGreaterThan(0);
+        }
+        try {
+          expect(dict.backend).toBe(row.backend);
 
           for (const [key, value] of expected) {
             expect(dict.exactMatchSearch(key), `exact ${JSON.stringify(key)}`).toBe(value);
-            expect(dict.commonPrefixSearch(key), `prefix ${JSON.stringify(key)}`).toContain(value);
+            const hit = dict.commonPrefixSearch(key).at(-1);
+            if (key !== '')
+              expect(hit, `prefix ${JSON.stringify(key)}`).toEqual({ value, length: key.length });
           }
 
           for (const miss of MISSES[row.charset]) {
             expect(expected.has(miss)).toBe(false);
-            expect(dict.exactMatchSearch(miss), `miss ${JSON.stringify(miss)}`).toBe(-1);
+            expect(dict.exactMatchSearch(miss), `miss ${JSON.stringify(miss)}`).toBeUndefined();
           }
 
           // Prefix hits come back shortest first and cover exactly the stored prefixes.
           const longest = [...expected.keys()].sort((a, b) => b.length - a.length)[0];
           const probe = `${longest}!`;
           const want = [...expected.entries()]
-            .filter(([k]) => probe.startsWith(k))
-            .sort((a, b) => Buffer.byteLength(a[0]) - Buffer.byteLength(b[0]))
-            .map(([, v]) => v);
+            .filter(([k]) => k !== '' && probe.startsWith(k))
+            .sort((a, b) => a[0].length - b[0].length)
+            .map(([k, v]) => ({ value: v, length: k.length }));
           expect(dict.commonPrefixSearch(probe)).toEqual(want);
         } finally {
           dict.dispose();

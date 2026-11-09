@@ -4,6 +4,11 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    setupFiles: ['tests/setup.ts'],
+    typecheck: {
+      include: ['tests/api/**/*.test-d.ts'],
+      tsconfig: 'tsconfig.test.json',
+    },
     globals: true,
     testTimeout: 30000,
     // The WebAssembly core's handle table is module-global. Use child
@@ -18,7 +23,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
       include: ['src/**/*.ts'],
-      exclude: ['src/generated/**', 'src/**/*.d.ts', 'src/**/index.ts', 'src/**/index.esm.ts'],
+      exclude: ['src/generated/**', 'src/**/*.d.ts', 'src/**/index.ts'],
       thresholds: {
         branches: 60,
         functions: 95,

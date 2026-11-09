@@ -86,6 +86,11 @@ pub fn prepare_keys<'a>(
     Ok(pairs.into_iter().unzip())
 }
 
+/// `key` up to, excluding, its first NUL byte.
+fn until_nul(key: &[u8]) -> &[u8] {
+    key.iter().position(|&b| b == 0).map_or(key, |n| &key[..n])
+}
+
 impl Dictionary {
     /// An empty dictionary that holds no trie; every search misses.
     #[must_use]
@@ -112,8 +117,7 @@ impl Dictionary {
     }
 
     /// Loads a dictionary image. With no explicit backend, darts-clone is
-    /// tried first because it validates the image; the taku910 layout
-    /// accepts any byte string.
+    /// tried first, then the taku910 layout.
     ///
     /// # Errors
     /// [`Error::InvalidDictionary`] when the chosen backend rejects the bytes.
@@ -160,10 +164,10 @@ impl Dictionary {
         })
     }
 
-    /// Value of `key`, or -1.
+    /// Value of `key`, or -1. A key containing NUL never matches.
     #[must_use]
     pub fn exact_match_search(&self, key: &[u8]) -> i32 {
-        if self.size() == 0 {
+        if self.size() == 0 || key.contains(&0) {
             return -1;
         }
         match &self.array {
@@ -172,27 +176,31 @@ impl Dictionary {
         }
     }
 
-    /// Values of every key that is a prefix of `key`, shortest first.
+    /// `(value, byte_length)` of every key that is a prefix of `key` (cut at
+    /// the first NUL), shortest first. A zero-length key is not reported.
     #[must_use]
-    pub fn common_prefix_search(&self, key: &[u8]) -> Vec<i32> {
+    pub fn common_prefix_search(&self, key: &[u8]) -> Vec<(i32, usize)> {
         let mut out = Vec::new();
         if self.size() == 0 {
             return out;
         }
+        let key = until_nul(key);
         match &self.array {
             Array::Darts(a) => a.common_prefix_search(key, &mut out),
             Array::Clone(a) => a.common_prefix_search(key, &mut out),
         }
+        out.retain(|&(_, len)| len > 0);
         out
     }
 
-    /// Advances one byte along `key` from (`node_pos`, `key_pos`), or returns
-    /// `None` for a dictionary that holds no trie.
+    /// Advances one byte along `key` (cut at the first NUL) from (`node_pos`,
+    /// `key_pos`), or returns `None` for a dictionary that holds no trie.
     #[must_use]
     pub fn traverse_one(&self, key: &[u8], node_pos: usize, key_pos: usize) -> Option<Step> {
         if self.size() == 0 {
             return None;
         }
+        let key = until_nul(key);
         let (mut node_pos, mut key_pos) = (node_pos, key_pos);
         let value = match &self.array {
             Array::Darts(a) => a.traverse_one(key, &mut node_pos, &mut key_pos),
@@ -205,9 +213,10 @@ impl Dictionary {
         })
     }
 
-    /// Every step of a traversal along `key`, stopping when `visit` returns
+    /// Every step of a traversal along `key` (cut at the first NUL), stopping when `visit` returns
     /// `false` or no further edge exists.
     pub fn traverse(&self, key: &[u8], mut visit: impl FnMut(Step) -> bool) {
+        let key = until_nul(key);
         let (mut node_pos, mut key_pos) = (0, 0);
         while key_pos < key.len() {
             let Some(step) = self.traverse_one(key, node_pos, key_pos) else {

@@ -1,91 +1,58 @@
 /**
  * Lightweight perf smoke tests.
  *
- * The full perf suite (performance.test.ts) is `describe.skip`-ed because it
- * generates 10k-100k keys and is too slow for CI. These smoke tests use small
- * inputs and very generous time budgets — they are not microbenchmarks, they
- * just catch order-of-magnitude regressions (e.g. an O(n) op going O(n²)).
- *
- * If a budget here ever flakes on a slower CI runner, raise the budget rather
- * than chasing the flake; the goal is *coarse* regression detection.
+ * Small inputs and very generous time budgets: not microbenchmarks, they only
+ * catch order-of-magnitude regressions (an O(n) operation turning O(n^2)).
+ * If a budget flakes on a slow runner, raise the budget rather than chasing
+ * the flake.
  */
 
-import { Builder, buildDictionary, TextDarts } from '../../src';
+import { describe, expect, it } from 'vitest';
+import { Dictionary } from '../../src';
 
 const KEYS = 2000;
 const SEARCHES = 1000;
 
-function generateKeys(): { keys: string[]; values: number[] } {
-  const keys: string[] = [];
-  const values: number[] = [];
-  for (let i = 0; i < KEYS; i += 1) {
-    keys.push(`key${i.toString().padStart(5, '0')}`);
-    values.push(i);
-  }
-  return { keys, values };
-}
+const entries = (): [string, number][] =>
+  Array.from({ length: KEYS }, (_v, i) => [`key${String(i).padStart(5, '0')}`, i]);
 
 describe('Performance smoke', () => {
   it(`builds a ${KEYS}-key dictionary in well under a second`, () => {
-    const { keys, values } = generateKeys();
-    const builder = new Builder();
-
+    const input = entries();
     const start = Date.now();
-    const dict = builder.build(keys, values);
+    using dict = Dictionary.build(input);
     const elapsed = Date.now() - start;
 
-    expect(dict.size()).toBeGreaterThan(0);
-    // Generous bound: build of 2k keys is normally a few ms; flag anything
-    // over a second as a serious regression.
+    expect(dict.byteLength).toBeGreaterThan(0);
     expect(elapsed).toBeLessThan(1000);
-
-    dict.dispose();
   });
 
   it(`runs ${SEARCHES} exact-match searches against ${KEYS} keys in well under a second`, () => {
-    const { keys, values } = generateKeys();
-    const dict = buildDictionary(keys, values);
+    using dict = Dictionary.build(entries());
 
     const start = Date.now();
     for (let i = 0; i < SEARCHES; i += 1) {
       const index = i % KEYS;
-      const key = `key${index.toString().padStart(5, '0')}`;
-      const result = dict.exactMatchSearch(key);
-      // Force the result to be observed so the loop can't be DCE'd by V8.
-      if (result !== index) {
-        throw new Error(`expected ${index} for ${key}, got ${result}`);
-      }
+      const result = dict.exactMatchSearch(`key${String(index).padStart(5, '0')}`);
+      if (result !== index) throw new Error(`expected ${index}, got ${result}`);
     }
-    const elapsed = Date.now() - start;
-
-    expect(elapsed).toBeLessThan(1000);
-
-    dict.dispose();
+    expect(Date.now() - start).toBeLessThan(1000);
   });
 
   it('replaces words in moderate text without quadratic blowup', () => {
-    const words: string[] = [];
-    for (let i = 0; i < 200; i += 1) {
-      words.push(`word${i.toString().padStart(3, '0')}`);
-    }
-    const td = TextDarts.build(words);
+    const words = Array.from({ length: 200 }, (_v, i) => `word${String(i).padStart(3, '0')}`);
+    using dict = Dictionary.build(words);
 
     let text = '';
     for (let i = 0; i < 1000; i += 1) {
-      if (i % 5 === 0) {
-        text += `${words[i % words.length]} `;
-      } else {
-        text += `random${i} `;
-      }
+      text += i % 5 === 0 ? `${words[i % words.length]} ` : `random${i} `;
     }
 
     const start = Date.now();
-    const result = td.replaceWords(text, (match) => `<<${match}>>`);
+    const result = dict.replaceWords(text, (match) => `<<${match}>>`);
     const elapsed = Date.now() - start;
 
-    expect(result.length).toBeGreaterThan(text.length); // every match grows the text
+    expect(result.length).toBe(text.length + 200 * 4);
     expect(elapsed).toBeLessThan(1000);
-
-    td.dispose();
   });
 });

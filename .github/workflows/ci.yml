@@ -52,7 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22.23.4, 24]
+        node: [22.23.4, 24]
     steps:
       - uses: actions/checkout@v7
       - run: rustup toolchain install
@@ -69,14 +69,14 @@ jobs:
       - name: Run tests against darts-clone backend
         run: yarn test:coverage
         env:
-          NODE_DARTS_DEFAULT_BACKEND: clone
+          NODE_DARTS_TEST_BACKEND: clone
 
       # Run the darts backend last so the coverage report uploaded to Codecov
       # reflects it (overwrites the previous run's coverage/ output).
       - name: Run tests against darts backend
         run: yarn test:coverage
         env:
-          NODE_DARTS_DEFAULT_BACKEND: darts
+          NODE_DARTS_TEST_BACKEND: darts
 
       - name: Upload coverage to Codecov
         if: matrix.node == '22.23.4'
@@ -87,3 +87,35 @@ jobs:
           flags: unittests
           name: codecov-node-darts
           fail_ci_if_error: false
+
+  node20-smoke:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - run: corepack enable
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable
+      - run: yarn build
+      - name: Round trip on Node 20
+        run: |
+          node -e "
+          const assert = require('node:assert');
+          const os = require('node:os');
+          const path = require('node:path');
+          assert.strictEqual(typeof Symbol.dispose, 'symbol');
+          const { Dictionary } = require('./dist/cjs/index.js');
+          const file = path.join(os.tmpdir(), 'smoke.darts');
+          const built = Dictionary.build([['a', 1], ['ab', 2]]);
+          built.saveSync(file);
+          built[Symbol.dispose]();
+          const d = Dictionary.loadSync(file);
+          assert.strictEqual(d.exactMatchSearch('ab'), 2);
+          assert.strictEqual(d.commonPrefixSearch('abc').length, 2);
+          d[Symbol.dispose]();
+          " || exit 1

@@ -71,10 +71,15 @@ impl DoubleArray {
         })
     }
 
-    /// Loads an array image; `None` when upstream `open()` would fail.
+    /// Loads an array image; `None` unless it is a whole number of units whose
+    /// root has `base == 1`, which the upstream builder always writes. Upstream
+    /// `open()` accepts any byte string.
     #[must_use]
     pub fn from_bytes(bytes: &[u8]) -> Option<Self> {
-        let units = bytes
+        if bytes.is_empty() || !bytes.len().is_multiple_of(UNIT_BYTES) {
+            return None;
+        }
+        let units: Vec<Unit> = bytes
             .as_chunks::<UNIT_BYTES>()
             .0
             .iter()
@@ -83,7 +88,7 @@ impl DoubleArray {
                 check: u32::from_le_bytes([c[4], c[5], c[6], c[7]]),
             })
             .collect();
-        Some(Self { units })
+        (units[0].base == 1).then_some(Self { units })
     }
 
     /// The bytes upstream `save()` writes (little-endian).
@@ -118,14 +123,15 @@ impl DoubleArray {
         self.terminal(b).unwrap_or(-1)
     }
 
-    /// Appends the values of every key that is a prefix of `key`, shortest first.
-    pub fn common_prefix_search(&self, key: &[u8], out: &mut Vec<i32>) {
+    /// Appends `(value, byte_length)` of every key that is a prefix of `key`,
+    /// shortest first; a zero-length key matches with length 0.
+    pub fn common_prefix_search(&self, key: &[u8], out: &mut Vec<(i32, usize)>) {
         let Some(mut b) = self.base_at(0) else {
             return;
         };
-        for &c in key {
+        for (i, &c) in key.iter().enumerate() {
             if let Some(v) = self.terminal(b) {
-                out.push(v);
+                out.push((v, i));
             }
             match self.edge(b, c) {
                 Some((_, base)) => b = base,
@@ -133,7 +139,7 @@ impl DoubleArray {
             }
         }
         if let Some(v) = self.terminal(b) {
-            out.push(v);
+            out.push((v, key.len()));
         }
     }
 
@@ -383,7 +389,7 @@ mod tests {
         assert_eq!(da.exact_match_search(b"abd"), -1);
         let mut out = Vec::new();
         da.common_prefix_search(b"abcd", &mut out);
-        assert_eq!(out, [0, 1, 2]);
+        assert_eq!(out, [(0, 1), (1, 2), (2, 3)]);
         let (mut n, mut k) = (0, 0);
         assert_eq!(da.traverse_one(b"ab", &mut n, &mut k), 0);
         assert_eq!(da.traverse_one(b"ab", &mut n, &mut k), 1);
@@ -416,11 +422,21 @@ mod tests {
 
     #[test]
     fn empty_array() {
-        let da = DoubleArray::from_bytes(&[1, 3, 2]).unwrap();
+        let da = DoubleArray::new();
         assert_eq!(da.size(), 0);
         assert_eq!(da.exact_match_search(b"a"), -1);
         let (mut n, mut k) = (0, 0);
         assert_eq!(da.traverse_one(b"a", &mut n, &mut k), -2);
+    }
+
+    #[test]
+    fn rejects_malformed_images() {
+        let mut unit = vec![0u8; 16];
+        assert!(DoubleArray::from_bytes(&unit).is_none());
+        unit[0] = 1;
+        assert!(DoubleArray::from_bytes(&unit).is_some());
+        assert!(DoubleArray::from_bytes(&unit[..15]).is_none());
+        assert!(DoubleArray::from_bytes(&[]).is_none());
     }
 
     #[test]
@@ -439,6 +455,9 @@ mod tests {
                     }
                 })
                 .collect();
+            let mut image: Vec<u8> = image;
+            image.resize(len.div_ceil(UNIT_BYTES).max(1) * UNIT_BYTES, 0);
+            image[..4].copy_from_slice(&1i32.to_le_bytes());
             let da = DoubleArray::from_bytes(&image).unwrap();
             for _ in 0..8 {
                 let klen = (lcg(&mut s) % 6) as usize;

@@ -11,7 +11,7 @@
       "src/**/*.d.ts",
       "tests/**/*.ts",
       "scripts/**/*.{js,cjs,mjs}",
-      "examples/**/*.{js,ts}",
+      "examples/**/*.mjs",
       "*.json",
       "*.{js,cjs,mjs}",
       "!**/node_modules",
@@ -108,7 +108,7 @@
   },
   "overrides": [
     {
-      "includes": ["tests/**/*.ts", "scripts/**/*.{js,cjs,mjs}", "src/core/native.ts"],
+      "includes": ["tests/**/*.ts", "scripts/**/*.{js,cjs,mjs}", "src/internal/core.ts"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -148,7 +148,7 @@
       }
     },
     {
-      "includes": ["examples/**/*.{js,ts}"],
+      "includes": ["examples/**/*.mjs"],
       "linter": {
         "rules": {
           "correctness": {
