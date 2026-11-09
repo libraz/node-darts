@@ -1,74 +1,20 @@
-# node-darts Examples
+# node-darts examples
 
-This directory contains examples demonstrating how to use the node-darts library.
-
-## Example List
-
-1. **basic-usage.js** - Basic usage of the node-darts library
-   - Loading an existing dictionary
-   - Text replacement using the loaded dictionary
-   - Exact match search
-   - Common prefix search
-
-2. **dictionary-builder.js** - Dictionary building and saving example
-   - Creating a dictionary builder
-   - Building and saving a dictionary
-   - Loading a saved dictionary
-   - Searching the dictionary
-
-3. **text-replacement.js** - Text replacement example using TextDarts
-   - Replacing words with a callback function
-   - Replacing words with a replacement map
-   - Generating HTML links
-   - Building and saving a dictionary
-   - Loading a dictionary from file
-
-4. **text-replacement.ts** - TypeScript version of the text replacement example
-
-5. **auto-complete.js** - Auto-complete feature example
-   - Implementing an auto-complete feature using Darts
-   - Interactive command-line auto-complete demo
-
-6. **error-handling.js** - Error handling example
-   - Handling various error cases in node-darts
-   - Using try-catch blocks with specific error types
-
-7. **morphological-analysis.js** - Dictionary search similar to morphological analysis
-   - Simple implementation of morphological analysis using Darts
-   - Word segmentation and part-of-speech tagging for text
-
-## Japanese Examples
-
-Japanese versions of these examples are available in the `ja/` subdirectory. These examples have the same functionality but include Japanese comments and console output.
-
-## Running the Examples
-
-Each example can be run using Node.js:
+Runnable examples for the `node-darts` API. Each file is an ES module that imports from `node-darts`; run one from the repository root after `yarn build`:
 
 ```bash
-node examples/basic-usage.js
-node examples/dictionary-builder.js
-node examples/text-replacement.js
-node examples/auto-complete.js
-node examples/error-handling.js
-node examples/morphological-analysis.js
+node examples/basic-usage.mjs
 ```
 
-For the TypeScript example:
+| File | Shows |
+|---|---|
+| `basic-usage.mjs` | Building a dictionary, exact match, common prefix search, `replaceWords` |
+| `dictionary-builder.mjs` | `[key, value]` and `Map` input, `save`, `load`, `toBytes`, `fromBytes`, choosing a backend |
+| `text-replacement.mjs` | Function, object and `Map` replacers; generating links; replacing with a loaded dictionary |
+| `auto-complete.mjs` | Prefix checks with `traverse` |
+| `morphological-analysis.mjs` | Longest-match word segmentation with part-of-speech tags using `commonPrefixSearch` |
+| `error-handling.mjs` | `TypeError` / `RangeError` for bad arguments, and `FileNotFoundError`, `InvalidDictionaryError`, `DartsError` with their `code` |
 
-```bash
-ts-node examples/text-replacement.ts
-```
+Examples that write files use a temporary directory and remove it before exiting.
 
-Or compile it first:
-
-```bash
-tsc examples/text-replacement.ts
-node examples/text-replacement.js
-```
-
-## Notes
-
-- These examples demonstrate the basic features of the node-darts library
-- The morphological analysis example is a simplified version of a real morphological analyzer
-- The auto-complete example might require more complex implementation in real applications
+Japanese versions of every example are in [`ja/`](ja/).
