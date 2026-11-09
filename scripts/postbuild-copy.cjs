@@ -1,9 +1,9 @@
 /**
  * Post-build script.
- * - Copies ESM type definitions to dist/index.d.ts for the unified types entry.
- * - Writes per-format package.json marker files so Node's ESM resolver treats
- *   dist/esm/*.js as ESM and dist/cjs/*.js as CommonJS regardless of the root
- *   package's "type" field.
+ * Writes per-format package.json marker files so Node's ESM resolver treats
+ * dist/esm/*.js as ESM and dist/cjs/*.js as CommonJS regardless of the root
+ * package's "type" field. Type definitions stay in their per-format directories
+ * and are selected through the "exports" conditions.
  */
 
 // eslint-disable-next-line
@@ -12,20 +12,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const distDir = path.join(__dirname, '..', 'dist');
-const esmDtsPath = path.join(distDir, 'esm', 'index.d.ts');
-const rootDtsPath = path.join(distDir, 'index.d.ts');
-
 if (!fs.existsSync(distDir)) {
   fs.mkdirSync(distDir, { recursive: true });
-}
-
-try {
-  const content = fs.readFileSync(esmDtsPath, 'utf8');
-  fs.writeFileSync(rootDtsPath, content);
-  console.log('✅ Copied type definitions to dist/index.d.ts');
-} catch (error) {
-  console.error('❌ Error copying type definitions:', error);
-  process.exit(1);
 }
 
 const markers = [

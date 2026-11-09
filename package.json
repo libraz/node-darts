@@ -2,21 +2,26 @@
   "name": "node-darts",
   "version": "1.1.0",
   "description": "Darts (Double-ARray Trie System) for Node.js, compiled to WebAssembly",
-  "main": "dist/cjs/index.js",
-  "module": "dist/esm/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/cjs/index.js",
+  "types": "./dist/cjs/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/cjs/index.js",
-      "import": "./dist/esm/index.js",
-      "types": "./dist/index.d.ts"
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
     },
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
     "LICENSE",
-    "NOTICE"
+    "NOTICE",
+    "README_ja.md"
   ],
   "scripts": {
     "build": "yarn clean && yarn build:wasm && tsc -p tsconfig.build.cjs.json && tsc -p tsconfig.build.esm.json && node scripts/postbuild-copy.cjs",
@@ -57,8 +62,7 @@
   },
   "homepage": "https://github.com/libraz/node-darts#readme",
   "engines": {
-    "node": ">=20.0.0",
-    "yarn": ">=4.0.0"
+    "node": ">=20.4.0"
   },
   "simple-git-hooks": {
     "pre-commit": "yarn lint-staged"

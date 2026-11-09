@@ -7,5 +7,5 @@
     "declarationDir": "./dist/cjs"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests", "examples", "src/index.esm.ts"]
+  "exclude": ["node_modules", "dist", "tests", "examples"]
 }
